@@ -40,27 +40,43 @@
   opacity: 1;
 }
 
-/* Emotion highlight variations */
+/* Emotion highlight variations - using lighter, pastel colors */
 .emotion-highlight[data-emotion="happy"] {
-  background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%) !important;
+  background: #FFF4B3 !important;
 }
 
 .emotion-highlight[data-emotion="sad"] {
-  background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%) !important;
+  background: #B3D4F5 !important;
 }
 
 .emotion-highlight[data-emotion="angry"] {
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%) !important;
+  background: #FFB3B3 !important;
 }
 
 .emotion-highlight[data-emotion="love"] {
-  background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%) !important;
+  background: #FFD6EC !important;
 }
 
 .emotion-highlight[data-emotion="fear"] {
-  background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%) !important;
+  background: #D4B3E6 !important;
 }
 
 .emotion-highlight[data-emotion="neutral"] {
-  background: linear-gradient(135deg, #95A5A6 0%, #7F8C8D 100%) !important;
+  background: #E0E5E6 !important;
+}
+
+.emotion-highlight[data-emotion="surprise"] {
+  background: #FFD4A3 !important;
+}
+
+.emotion-highlight[data-emotion="disgust"] {
+  background: #D4B3A3 !important;
+}
+
+.emotion-highlight[data-emotion="trust"] {
+  background: #B3E6B3 !important;
+}
+
+.emotion-highlight[data-emotion="anticipation"] {
+  background: #FFB3D4 !important;
 }

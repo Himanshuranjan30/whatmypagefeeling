@@ -6,9 +6,10 @@ A Chrome extension that analyzes webpage content for emotions using Google's Gem
 
 - 🎨 Modern, colorful UI with gradient design
 - 🤖 Powered by Google's Gemini AI for emotion analysis
-- 🌈 Color-coded emotion highlighting on webpages
+- 🌈 **Comprehensive color-coding** - ALL text on the webpage gets analyzed and colored
 - 😊 Supports multiple emotions: happy, sad, angry, love, fear, neutral, and more
 - ⚡ Fast and easy to use with one-click analysis
+- 🎯 Every piece of text gets emotion-based coloring, not just selected phrases
 
 ## Installation
 

@@ -48,18 +48,18 @@ function applyEmotionColors(emotions) {
   // First, remove any existing emotion spans
   removeExistingEmotionSpans();
 
-  // Define emotion colors
+  // Define emotion colors - lighter, pastel versions
   const emotionColors = {
-    happy: '#FFE66D',
-    sad: '#4A90E2',
-    angry: '#FF6B6B',
-    love: '#FF69B4',
-    fear: '#9B59B6',
-    neutral: '#95A5A6',
-    surprise: '#FFA500',
-    disgust: '#8B4513',
-    trust: '#32CD32',
-    anticipation: '#FF1493'
+    happy: '#FFF4B3',      // Light yellow
+    sad: '#B3D4F5',        // Light blue
+    angry: '#FFB3B3',      // Light red
+    love: '#FFD6EC',       // Light pink
+    fear: '#D4B3E6',       // Light purple
+    neutral: '#E0E5E6',    // Light gray
+    surprise: '#FFD4A3',   // Light orange
+    disgust: '#D4B3A3',    // Light brown
+    trust: '#B3E6B3',      // Light green
+    anticipation: '#FFB3D4' // Light rose
   };
 
   // Get all text nodes
@@ -158,13 +158,14 @@ function wrapTextNode(textNode, color, emotion) {
   const span = document.createElement('span');
   span.className = 'emotion-highlight';
   span.style.backgroundColor = color;
-  span.style.padding = '2px 4px';
-  span.style.borderRadius = '3px';
+  span.style.padding = '3px 6px';
+  span.style.borderRadius = '4px';
   span.style.color = getContrastColor(color);
   span.style.fontWeight = '500';
   span.style.transition = 'all 0.3s ease';
   span.style.display = 'inline-block';
   span.style.margin = '1px';
+  span.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
   span.setAttribute('data-emotion', emotion);
   
   // Add hover effect

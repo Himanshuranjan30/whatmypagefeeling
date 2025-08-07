@@ -24,7 +24,11 @@ saveApiKeyBtn.addEventListener('click', () => {
 
   chrome.storage.local.set({ geminiApiKey: apiKey }, () => {
     showStatus('API key saved successfully!', 'success');
-    apiKeySection.style.display = 'none';
+    // Animate hide
+    apiKeySection.style.opacity = '0';
+    setTimeout(() => {
+      apiKeySection.style.display = 'none';
+    }, 300);
   });
 });
 
