@@ -4,9 +4,10 @@ A Chrome extension that analyzes webpage content for emotions using Google's Gem
 
 ## Features
 
-- 🎨 Modern, colorful UI with gradient design
+- 🎨 **Clean, modern UI** inspired by top design systems
 - 🤖 Powered by Google's Gemini AI for emotion analysis
 - 🌈 **Comprehensive color-coding** - ALL text on the webpage gets analyzed and colored
+- 🎨 **Soft pastel colors** - Easy on the eyes with subtle, beautiful highlighting
 - 😊 Supports multiple emotions: happy, sad, angry, love, fear, neutral, and more
 - ⚡ Fast and easy to use with one-click analysis
 - 🎯 Every piece of text gets emotion-based coloring, not just selected phrases
@@ -45,24 +46,32 @@ A Chrome extension that analyzes webpage content for emotions using Google's Gem
 
 4. Wait for the analysis to complete
 
-5. The webpage content will be highlighted with different colors based on detected emotions:
-   - 🟡 Yellow: Happy content
-   - 🔵 Blue: Sad content
-   - 🔴 Red: Angry content
-   - 💗 Pink: Love/affection
-   - 🟣 Purple: Fear
-   - ⚪ Gray: Neutral
+5. The webpage content will be highlighted with soft pastel colors based on detected emotions:
+   - 🌼 Light Yellow: Happy content
+   - 💧 Light Blue: Sad content
+   - 🌸 Light Red: Angry content
+   - 💖 Light Pink: Love/affection
+   - 🔮 Light Purple: Fear
+   - 🌫️ Light Gray: Neutral
+   - 🍑 Light Orange: Surprise
+   - 🤎 Light Brown: Disgust
+   - 🌱 Light Green: Trust
+   - 🌹 Light Rose: Anticipation
 
 ## Emotion Color Legend
 
 | Emotion | Color |
 |---------|-------|
-| Happy | Yellow (#FFE66D) |
-| Sad | Blue (#4A90E2) |
-| Angry | Red (#FF6B6B) |
-| Love | Pink (#FF69B4) |
-| Fear | Purple (#9B59B6) |
-| Neutral | Gray (#95A5A6) |
+| Happy | Light Yellow (#FFF4B3) |
+| Sad | Light Blue (#B3D4F5) |
+| Angry | Light Red (#FFB3B3) |
+| Love | Light Pink (#FFD6EC) |
+| Fear | Light Purple (#D4B3E6) |
+| Neutral | Light Gray (#E0E5E6) |
+| Surprise | Light Orange (#FFD4A3) |
+| Disgust | Light Brown (#D4B3A3) |
+| Trust | Light Green (#B3E6B3) |
+| Anticipation | Light Rose (#FFB3D4) |
 
 ## Technical Details
 
