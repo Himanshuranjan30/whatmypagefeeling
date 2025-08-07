@@ -1,0 +1,66 @@
+/* Emotion highlight styles */
+.emotion-highlight {
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tooltip for emotion highlights */
+.emotion-highlight::after {
+  content: attr(data-emotion);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 10000;
+}
+
+.emotion-highlight:hover::after {
+  opacity: 1;
+}
+
+/* Emotion highlight variations */
+.emotion-highlight[data-emotion="happy"] {
+  background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%) !important;
+}
+
+.emotion-highlight[data-emotion="sad"] {
+  background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%) !important;
+}
+
+.emotion-highlight[data-emotion="angry"] {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%) !important;
+}
+
+.emotion-highlight[data-emotion="love"] {
+  background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%) !important;
+}
+
+.emotion-highlight[data-emotion="fear"] {
+  background: linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%) !important;
+}
+
+.emotion-highlight[data-emotion="neutral"] {
+  background: linear-gradient(135deg, #95A5A6 0%, #7F8C8D 100%) !important;
+}
