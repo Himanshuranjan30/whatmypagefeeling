@@ -22,23 +22,25 @@ async function analyzeTextWithGemini(content, apiKey) {
     ? content.substring(0, maxLength) + '...' 
     : content;
   
-  const prompt = `Analyze the following text and identify emotional content. 
-For each distinct section or sentence that expresses a clear emotion, provide:
-1. The exact text snippet (keep it short, 10-50 words)
-2. The primary emotion (choose from: happy, sad, angry, love, fear, surprise, disgust, trust, anticipation, or neutral)
+  const prompt = `Analyze the emotional content of this webpage text. Break it down into sentences or small phrases and assign an emotion to EACH one.
 
-Format your response as a JSON array of objects like this:
+For EVERY sentence or meaningful phrase in the text, provide:
+1. The exact text (can be 1-100 words)
+2. The dominant emotion (choose from: happy, sad, angry, love, fear, surprise, disgust, trust, anticipation, or neutral)
+
+Format your response as a JSON array covering ALL text:
 [
-  {"text": "exact text snippet here", "emotion": "happy"},
-  {"text": "another text snippet", "emotion": "sad"}
+  {"text": "First sentence or phrase", "emotion": "happy"},
+  {"text": "Second sentence or phrase", "emotion": "neutral"},
+  {"text": "Third sentence or phrase", "emotion": "sad"}
 ]
 
-Important:
-- Extract meaningful phrases that clearly express emotions
-- Keep text snippets concise but complete
-- Choose the most dominant emotion for each snippet
-- If no clear emotion, use "neutral"
-- Aim for 10-20 emotion blocks for a typical webpage
+IMPORTANT RULES:
+- Cover EVERY sentence/phrase in the text, don't skip any
+- Assign "neutral" if no clear emotion is present
+- Break long paragraphs into multiple entries
+- Include ALL text, even navigation items, headers, etc.
+- Return 50-200+ entries to cover the entire page
 
 Text to analyze:
 ${truncatedContent}`;
@@ -59,7 +61,7 @@ ${truncatedContent}`;
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         }
       })
     });
@@ -88,7 +90,7 @@ ${truncatedContent}`;
           text: item.text.trim(),
           emotion: item.emotion.toLowerCase()
         }))
-        .slice(0, 50); // Limit to 50 emotions max
+        .slice(0, 500); // Limit to 500 emotions max to cover entire page
       
       return validatedEmotions;
     } catch (parseError) {

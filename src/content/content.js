@@ -62,13 +62,48 @@ function applyEmotionColors(emotions) {
     anticipation: '#FF1493'
   };
 
-  // Process each emotion block
-  emotions.forEach(emotionBlock => {
-    const { text, emotion } = emotionBlock;
-    const color = emotionColors[emotion.toLowerCase()] || emotionColors.neutral;
-    
-    // Find and highlight matching text
-    highlightText(text, color, emotion);
+  // Get all text nodes
+  const textNodes = getAllTextNodes();
+  
+  // Create a map of text to emotions for quick lookup
+  const emotionMap = new Map();
+  emotions.forEach(({ text, emotion }) => {
+    emotionMap.set(text.toLowerCase().trim(), emotion);
+  });
+
+  // Process all text nodes
+  textNodes.forEach(node => {
+    const text = node.nodeValue.trim();
+    if (text.length === 0) return;
+
+    // Try to find emotion for this text
+    let foundEmotion = null;
+    let matchedText = '';
+
+    // First try exact match
+    if (emotionMap.has(text.toLowerCase())) {
+      foundEmotion = emotionMap.get(text.toLowerCase());
+      matchedText = text;
+    } else {
+      // Try to find partial matches
+      for (const [emotionText, emotion] of emotionMap) {
+        if (text.toLowerCase().includes(emotionText) || emotionText.includes(text.toLowerCase())) {
+          foundEmotion = emotion;
+          matchedText = text;
+          break;
+        }
+      }
+    }
+
+    // If still no match, assign neutral
+    if (!foundEmotion) {
+      foundEmotion = 'neutral';
+      matchedText = text;
+    }
+
+    // Apply color to the entire text node
+    const color = emotionColors[foundEmotion.toLowerCase()] || emotionColors.neutral;
+    wrapTextNode(node, color, foundEmotion);
   });
 }
 
@@ -84,83 +119,70 @@ function removeExistingEmotionSpans() {
   });
 }
 
-// Highlight specific text with emotion color
-function highlightText(searchText, color, emotion) {
+
+
+// Get all text nodes in the document
+function getAllTextNodes() {
   const walker = document.createTreeWalker(
     document.body,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: function(node) {
-        if (node.parentElement.tagName === 'SCRIPT' || 
-            node.parentElement.tagName === 'STYLE' ||
-            node.parentElement.tagName === 'NOSCRIPT' ||
+        // Skip script, style, and other non-content elements
+        const parentTag = node.parentElement.tagName;
+        if (parentTag === 'SCRIPT' || 
+            parentTag === 'STYLE' ||
+            parentTag === 'NOSCRIPT' ||
             node.parentElement.classList.contains('emotion-highlight')) {
           return NodeFilter.FILTER_REJECT;
         }
-        return NodeFilter.FILTER_ACCEPT;
+        // Only accept nodes with meaningful text
+        if (node.nodeValue.trim().length > 0) {
+          return NodeFilter.FILTER_ACCEPT;
+        }
+        return NodeFilter.FILTER_REJECT;
       }
     }
   );
 
-  const nodesToProcess = [];
+  const textNodes = [];
   let node;
   while (node = walker.nextNode()) {
-    const text = node.nodeValue;
-    const lowerText = text.toLowerCase();
-    const lowerSearchText = searchText.toLowerCase();
-    
-    if (lowerText.includes(lowerSearchText)) {
-      nodesToProcess.push(node);
-    }
+    textNodes.push(node);
   }
+  return textNodes;
+}
 
-  // Process nodes
-  nodesToProcess.forEach(node => {
-    const text = node.nodeValue;
-    const lowerText = text.toLowerCase();
-    const lowerSearchText = searchText.toLowerCase();
-    const index = lowerText.indexOf(lowerSearchText);
-    
-    if (index !== -1) {
-      const parent = node.parentElement;
-      const beforeText = text.substring(0, index);
-      const matchedText = text.substring(index, index + searchText.length);
-      const afterText = text.substring(index + searchText.length);
-      
-      // Create new nodes
-      const beforeNode = document.createTextNode(beforeText);
-      const afterNode = document.createTextNode(afterText);
-      
-      // Create highlighted span
-      const span = document.createElement('span');
-      span.className = 'emotion-highlight';
-      span.style.backgroundColor = color;
-      span.style.padding = '2px 4px';
-      span.style.borderRadius = '3px';
-      span.style.color = getContrastColor(color);
-      span.style.fontWeight = '500';
-      span.style.transition = 'all 0.3s ease';
-      span.setAttribute('data-emotion', emotion);
-      span.textContent = matchedText;
-      
-      // Add hover effect
-      span.addEventListener('mouseenter', function() {
-        this.style.transform = 'scale(1.05)';
-        this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-      });
-      
-      span.addEventListener('mouseleave', function() {
-        this.style.transform = 'scale(1)';
-        this.style.boxShadow = 'none';
-      });
-      
-      // Replace the text node
-      parent.insertBefore(beforeNode, node);
-      parent.insertBefore(span, node);
-      parent.insertBefore(afterNode, node);
-      parent.removeChild(node);
-    }
+// Wrap a text node with emotion styling
+function wrapTextNode(textNode, color, emotion) {
+  const span = document.createElement('span');
+  span.className = 'emotion-highlight';
+  span.style.backgroundColor = color;
+  span.style.padding = '2px 4px';
+  span.style.borderRadius = '3px';
+  span.style.color = getContrastColor(color);
+  span.style.fontWeight = '500';
+  span.style.transition = 'all 0.3s ease';
+  span.style.display = 'inline-block';
+  span.style.margin = '1px';
+  span.setAttribute('data-emotion', emotion);
+  
+  // Add hover effect
+  span.addEventListener('mouseenter', function() {
+    this.style.transform = 'scale(1.05)';
+    this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
   });
+  
+  span.addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+    this.style.boxShadow = 'none';
+  });
+  
+  // Clone the text content
+  span.textContent = textNode.nodeValue;
+  
+  // Replace the text node with the span
+  textNode.parentNode.replaceChild(span, textNode);
 }
 
 // Get contrasting text color based on background
