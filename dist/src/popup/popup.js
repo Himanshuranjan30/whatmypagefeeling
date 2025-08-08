@@ -168,10 +168,9 @@ function extractPageText() {
 }
 
 
-// Analyze emotions with Gemini API
+// Analyze emotions via local proxy to Gemini API
 async function analyzeEmotionsWithGemini(content) {
-  const API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+  const API_URL = 'https://68962f1a27d392000827a1d0--jovial-cupcake-6bba72.netlify.app/.netlify/functions/gemini-generate';
   
   const prompt = `Analyze this webpage content and identify text elements with clear emotions.
 
