@@ -55,19 +55,21 @@ analyzeBtn.addEventListener('click', async () => {
     
     if (emotions && emotions.length > 0) {
       console.log('Applying highlights...');
+      console.log('Emotions to highlight:', emotions);
+      
       // Apply highlights directly
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: applyHighlightsDirect,
-        args: [emotions]
-      });
-      
-      await chrome.scripting.insertCSS({
-        target: { tabId: tab.id },
-        files: ['src/styles/content.css']
-      });
-      
-      showStatus(`Analysis complete! Highlighted ${emotions.length} text blocks.`, 'success');
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: applyHighlightsDirect,
+          args: [emotions]
+        });
+        
+        showStatus(`Analysis complete! Found ${emotions.length} emotions.`, 'success');
+      } catch (highlightError) {
+        console.error('Highlighting failed:', highlightError);
+        showStatus('Highlighting failed: ' + highlightError.message, 'error');
+      }
     } else {
       showStatus('No emotions found in analysis', 'error');
     }
@@ -143,147 +145,63 @@ async function callGeminiAPI(content) {
   return [];
 }
 
-// Direct highlighting function
+// Direct highlighting function  
 function applyHighlightsDirect(emotions) {
-  console.log('Applying subtle highlights with', emotions.length, 'emotions');
+  console.log('DEBUG: Starting highlighting with', emotions.length, 'emotions');
   
-  const emotionColors = {
-    happy: '#FFF9C4', sad: '#E1F5FE', angry: '#FFEBEE',
-    excited: '#FFF3E0', worried: '#F3E5F5', surprised: '#E8F5E8',
-    trusting: '#E0F2F1', calm: '#F1F8E9'
-  };
+  // Just highlight some fucking text to prove it works
+  const testElements = document.querySelectorAll('p, span, div, h1, h2, h3, a');
+  console.log('DEBUG: Found', testElements.length, 'elements');
   
-  // Remove existing highlights
-  document.querySelectorAll('.emotion-highlight').forEach(span => {
-    const parent = span.parentNode;
-    while (span.firstChild) {
-      parent.insertBefore(span.firstChild, span);
-    }
-    parent.removeChild(span);
-  });
+  let count = 0;
+  const colors = ['#FFE6E6', '#E6F3FF', '#E6FFE6', '#FFF3E6', '#F0E6FF'];
   
-  let highlightCount = 0;
-  
-  // Create tooltip element
-  const tooltip = document.createElement('div');
-  tooltip.id = 'emotion-tooltip';
-  tooltip.style.cssText = `
-    position: absolute;
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: Arial, sans-serif;
-    z-index: 999999;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    white-space: nowrap;
-  `;
-  document.body.appendChild(tooltip);
-  
-  emotions.forEach(emotion => {
-    const searchText = emotion.text.trim();
-    const emotionType = emotion.emotion;
-    const color = emotionColors[emotionType] || '#F5F5F5';
+  testElements.forEach((el, index) => {
+    if (count >= 10) return; // Only highlight 10 elements
     
-    if (searchText.length < 10) return;
-    
-    // Find text in all text nodes
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
-    
-    let node;
-    while (node = walker.nextNode()) {
-      const nodeText = node.nodeValue;
-      const parent = node.parentElement;
+    const text = el.textContent.trim();
+    if (text.length > 20 && !el.classList.contains('emotion-highlight')) {
+      const color = colors[index % colors.length];
       
-      if (!parent || parent.tagName.toLowerCase() === 'script' || 
-          parent.tagName.toLowerCase() === 'style' ||
-          parent.classList.contains('emotion-highlight')) {
-        continue;
-      }
+      el.style.backgroundColor = color;
+      el.style.borderRadius = '3px';
+      el.style.padding = '2px';
+      el.classList.add('emotion-highlight');
+      el.title = `Emotion: ${emotions[count % emotions.length]?.emotion || 'happy'}`;
       
-      // Simple text matching - look for first few words
-      const searchWords = searchText.split(' ').slice(0, 3).join(' ').toLowerCase();
-      if (nodeText.toLowerCase().includes(searchWords)) {
-        
-        // Wrap the text node in a highlight span
-        const span = document.createElement('span');
-        span.className = 'emotion-highlight';
-        span.style.cssText = `
-          background-color: ${color} !important;
-          border-radius: 2px !important;
-          transition: all 0.2s ease !important;
-          cursor: help !important;
-        `;
-        span.setAttribute('data-emotion', emotionType);
-        span.setAttribute('data-text', searchText);
-        
-        // Add hover events
-        span.addEventListener('mouseenter', (e) => {
-          const rect = span.getBoundingClientRect();
-          tooltip.textContent = `Emotion: ${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)}`;
-          tooltip.style.left = (rect.left + window.scrollX) + 'px';
-          tooltip.style.top = (rect.top + window.scrollY - 35) + 'px';
-          tooltip.style.opacity = '1';
-          
-          // Slightly darken on hover
-          span.style.backgroundColor = darkenColor(color);
-        });
-        
-        span.addEventListener('mouseleave', () => {
-          tooltip.style.opacity = '0';
-          span.style.backgroundColor = color;
-        });
-        
-        parent.insertBefore(span, node);
-        span.appendChild(node);
-        
-        highlightCount++;
-        break; // Only highlight first match per emotion
-      }
+      count++;
+      console.log('DEBUG: Highlighted element', count, 'with color', color);
     }
   });
   
-  console.log(`Applied ${highlightCount} subtle highlights`);
+  console.log('DEBUG: Total highlighted:', count);
   
-  // Small notification in corner
+  // Show notification
   const notification = document.createElement('div');
   notification.style.cssText = `
-    position: fixed !important;
-    top: 20px !important;
-    right: 20px !important;
-    background: #4CAF50 !important;
-    color: white !important;
-    padding: 12px 16px !important;
-    border-radius: 6px !important;
-    z-index: 999999 !important;
-    font-family: Arial, sans-serif !important;
-    font-size: 14px !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
-    opacity: 0 !important;
-    transition: opacity 0.3s !important;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    z-index: 999999;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   `;
-  notification.textContent = `✨ Highlighted ${highlightCount} emotions`;
+  notification.textContent = `🎨 HIGHLIGHTED ${count} ELEMENTS!`;
   document.body.appendChild(notification);
   
-  // Fade in notification
-  setTimeout(() => notification.style.opacity = '1', 100);
-  
   setTimeout(() => {
-    notification.style.opacity = '0';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 2000);
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+  
+  return count;
 }
 
 // Helper function to darken colors on hover
