@@ -1,5 +1,5 @@
-// Background script for What My Page Feeling extension
-console.log('Background script loaded');
+// Background script for PagePulse extension
+console.log('PagePulse background script loaded');
 
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {

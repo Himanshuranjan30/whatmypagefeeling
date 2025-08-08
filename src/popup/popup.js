@@ -168,7 +168,7 @@ function extractPageText() {
 }
 
 
-// Analyze emotions via local proxy to Gemini API
+// PagePulse: Analyze emotions via Netlify proxy to Gemini API
 async function analyzeEmotionsWithGemini(content) {
   const API_URL = 'https://68962f1a27d392000827a1d0--jovial-cupcake-6bba72.netlify.app/.netlify/functions/gemini-generate';
   

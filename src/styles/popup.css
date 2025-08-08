@@ -20,7 +20,7 @@ body {
   max-width: 400px;
 }
 
-/* Trust Panel - Professional positioning */
+/* Trust Panel - PagePulse Branding */
 .trust-panel {
   position: absolute;
   top: 16px;
@@ -32,17 +32,18 @@ body {
 }
 
 .trust-rating {
-  background: rgba(100, 116, 139, 0.1);
-  color: #475569;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
 .trust-text {
   font-size: 11px;
-  color: #64748B;
+  color: #667eea;
   font-weight: 500;
 }
 
@@ -130,21 +131,21 @@ body {
   margin: 0;
 }
 
-/* Primary Button - Refined design */
+/* Primary Button - PagePulse Design */
 .analyze-btn {
   width: 100%;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #D4A574 0%, #B8975F 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #FFFFFF;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(180, 151, 95, 0.25);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -154,8 +155,8 @@ body {
 
 .analyze-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(180, 151, 95, 0.3);
-  background: linear-gradient(135deg, #B8975F 0%, #A58850 100%);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
 }
 
 .analyze-btn:active {

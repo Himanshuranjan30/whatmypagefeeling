@@ -1,5 +1,5 @@
-// Content script for What My Page Feeling extension
-console.log('What My Page Feeling content script loaded');
+// Content script for PagePulse extension
+console.log('PagePulse content script loaded');
 
 // Ensure CSS is properly loaded and add any dynamic style adjustments
 document.addEventListener('DOMContentLoaded', function() {

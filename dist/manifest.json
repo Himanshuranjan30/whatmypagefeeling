@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "What My Page Feeling",
+  "name": "PagePulse",
   "version": "1.0.0",
-  "description": "Analyze webpage emotions using AI and visualize them with color blocks",
+  "description": "Instantly analyze the emotional tone and sentiment of any webpage. Perfect for marketers, writers, and content creators who want to understand how their content feels to readers.",
   "permissions": [
     "activeTab",
     "storage",
@@ -10,7 +10,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://*.netlify.app/*"
   ],
   "content_scripts": [
     {
