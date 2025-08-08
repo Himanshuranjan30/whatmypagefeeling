@@ -145,43 +145,148 @@ async function callGeminiAPI(content) {
 
 // Direct highlighting function
 function applyHighlightsDirect(emotions) {
+  console.log('Starting highlight process with', emotions.length, 'emotions');
+  
   const emotionColors = {
     happy: '#FFE4E6', sad: '#E0F2FE', angry: '#FEF2F2',
     excited: '#FFF4E6', worried: '#F0F9FF', surprised: '#F5F3FF',
     trusting: '#F0FDF4', calm: '#F9FAFB'
   };
   
-  emotions.forEach(emotion => {
-    const text = emotion.text.trim();
+  // Remove existing highlights first
+  document.querySelectorAll('.emotion-highlight').forEach(el => {
+    const parent = el.parentNode;
+    while (el.firstChild) {
+      parent.insertBefore(el.firstChild, el);
+    }
+    parent.removeChild(el);
+  });
+  
+  let highlightCount = 0;
+  
+  emotions.forEach((emotion, index) => {
+    console.log(`Processing emotion ${index}:`, emotion);
+    const searchText = emotion.text.trim();
     const color = emotionColors[emotion.emotion] || '#F9FAFB';
     
-    // Find and highlight the text
+    if (searchText.length < 5) return; // Skip very short text
+    
+    // Find all text nodes
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
-      null,
+      {
+        acceptNode: function(node) {
+          // Skip script, style, and already highlighted nodes
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          
+          const tagName = parent.tagName.toLowerCase();
+          if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          
+          if (parent.classList.contains('emotion-highlight')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      },
       false
     );
     
     let node;
-    while (node = walker.nextNode()) {
-      if (node.nodeValue.includes(text.substring(0, 30))) {
+    let found = false;
+    
+    while (node = walker.nextNode() && !found) {
+      const nodeText = node.nodeValue.toLowerCase().trim();
+      const searchLower = searchText.toLowerCase().trim();
+      
+      // Try different matching strategies
+      let match = false;
+      
+      // Strategy 1: Direct substring match
+      if (nodeText.includes(searchLower.substring(0, 20))) {
+        match = true;
+      }
+      
+      // Strategy 2: Word-based matching (at least 3 words match)
+      if (!match) {
+        const nodeWords = nodeText.split(/\s+/).filter(w => w.length > 2);
+        const searchWords = searchLower.split(/\s+/).filter(w => w.length > 2);
+        
+        if (searchWords.length >= 3) {
+          const matchingWords = searchWords.filter(word => 
+            nodeWords.some(nodeWord => nodeWord.includes(word) || word.includes(nodeWord))
+          );
+          
+          if (matchingWords.length >= Math.min(3, searchWords.length * 0.6)) {
+            match = true;
+          }
+        }
+      }
+      
+      if (match) {
+        console.log(`Found match for "${searchText}" in node:`, nodeText.substring(0, 50));
+        
         const parent = node.parentElement;
-        if (parent && !parent.classList.contains('emotion-highlight')) {
+        if (parent) {
+          // Create highlight span
           const span = document.createElement('span');
           span.className = 'emotion-highlight';
-          span.style.backgroundColor = color;
-          span.style.padding = '2px 4px';
-          span.style.borderRadius = '3px';
-          span.style.display = 'inline';
+          span.style.cssText = `
+            background-color: ${color} !important;
+            padding: 2px 4px !important;
+            border-radius: 3px !important;
+            display: inline !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+          `;
+          span.setAttribute('data-emotion', emotion.emotion);
+          span.setAttribute('title', `Emotion: ${emotion.emotion}`);
           
+          // Replace the text node with highlighted span
           parent.insertBefore(span, node);
           span.appendChild(node);
-          break;
+          
+          highlightCount++;
+          found = true;
+          
+          console.log(`Applied highlight #${highlightCount} for emotion: ${emotion.emotion}`);
         }
       }
     }
+    
+    if (!found) {
+      console.log(`No match found for: "${searchText}"`);
+    }
   });
+  
+  console.log(`Highlighting complete! Applied ${highlightCount} highlights out of ${emotions.length} emotions.`);
+  
+  // Add a temporary notification
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: #4CAF50 !important;
+    color: white !important;
+    padding: 12px 20px !important;
+    border-radius: 6px !important;
+    z-index: 999999 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  `;
+  notification.textContent = `✨ Highlighted ${highlightCount} text blocks with emotions!`;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
 }
 
 // Analyze content with Gemini API
