@@ -35,6 +35,7 @@ body {
 .header {
   margin-bottom: 36px;
   margin-top: 8px;
+  text-align: center;
 }
 
 .header h1 {
@@ -46,10 +47,15 @@ body {
 }
 
 .subtitle {
-  font-size: 15px;
-  color: #666;
-  font-weight: 400;
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
   line-height: 1.5;
+  background: #F3F4F6;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  margin-top: 8px;
 }
 
 /* Main Content */
@@ -131,6 +137,14 @@ body {
 .preview-text {
   font-size: 14px;
   color: #4B5563;
+  margin-bottom: 4px;
+}
+
+.preview-insight {
+  font-size: 13px;
+  color: #6B7280;
+  font-style: italic;
+  margin: 0;
 }
 
 .emotion-stat {
@@ -291,6 +305,14 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
+.guide-benefit {
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
 .legend-items {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -390,6 +412,15 @@ body {
   padding: 20px;
   border-radius: 16px;
   margin-top: 24px;
+}
+
+/* Marketer Testimonial - positioned after CTA */
+.marketer-testimonial {
+  margin-top: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #FFF4F0 0%, #FFF9E6 100%);
+  border: 1px solid #FED7AA;
 }
 
 .quote {
