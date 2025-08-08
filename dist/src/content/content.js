@@ -1,21 +1,144 @@
+// Content script for What My Page Feeling extension
+console.log('What My Page Feeling content script loaded');
+
+// Global flag to prevent multiple initializations
+if (!window.whatMyPageFeelingLoaded) {
+  window.whatMyPageFeelingLoaded = true;
+  
+  // Add global styles for highlights
+  const globalStyles = document.createElement('style');
+  globalStyles.id = 'emotion-highlight-styles';
+  globalStyles.textContent = `
+    .emotion-highlight {
+      box-sizing: border-box !important;
+      display: inline !important;
+      position: relative !important;
+      transition: all 0.2s ease !important;
+      line-height: inherit !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      color: inherit !important;
+      text-decoration: inherit !important;
+      margin: 0 !important;
+      vertical-align: baseline !important;
+    }
+    
+    .emotion-highlight:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      z-index: 1000 !important;
+    }
+    
+    .emotion-tooltip {
+      position: absolute !important;
+      background: rgba(0, 0, 0, 0.9) !important;
+      color: white !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      white-space: nowrap !important;
+      z-index: 10001 !important;
+      pointer-events: none !important;
+      font-family: Arial, sans-serif !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    }
+    
+    .emotion-notification {
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      padding: 12px 20px !important;
+      border-radius: 8px !important;
+      z-index: 999999 !important;
+      font-family: Arial, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+      max-width: 300px !important;
+      word-wrap: break-word !important;
+      pointer-events: none !important;
+    }
+    
+    /* Ensure highlights work well with different text elements */
+    h1 .emotion-highlight,
+    h2 .emotion-highlight,
+    h3 .emotion-highlight,
+    h4 .emotion-highlight,
+    h5 .emotion-highlight,
+    h6 .emotion-highlight {
+      font-weight: inherit !important;
+      font-size: inherit !important;
+    }
+    
+    p .emotion-highlight,
+    span .emotion-highlight,
+    div .emotion-highlight {
+      line-height: inherit !important;
+    }
+    
+    a .emotion-highlight {
+      text-decoration: inherit !important;
+      color: inherit !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .emotion-highlight {
+        padding: 1px 2px !important;
+      }
+      
+      .emotion-tooltip {
+        font-size: 11px !important;
+        padding: 3px 6px !important;
+      }
+      
+      .emotion-notification {
+        right: 10px !important;
+        top: 10px !important;
+        max-width: 250px !important;
+        font-size: 13px !important;
+      }
+    }
+    
+    /* Print styles - hide highlights when printing */
+    @media print {
+      .emotion-highlight {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+      }
+      
+      .emotion-tooltip,
+      .emotion-notification {
+        display: none !important;
+      }
+    }
+  `;
+  
+  // Only add styles if they don't exist
+  if (!document.getElementById('emotion-highlight-styles')) {
+    document.head.appendChild(globalStyles);
+  }
+  
+  console.log('Content script initialized successfully');
+}
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Content script received message:', request.action);
   
   try {
     if (request.action === 'getPageContent') {
-      // Get all text content from the page
       const content = extractPageText();
       console.log('Extracted content length:', content.length);
       sendResponse({ content: content });
     } else if (request.action === 'applyEmotionColors') {
-      // Apply emotion colors to the page
-      applyEmotionColors(request.emotions);
-      sendResponse({ success: true });
+      const result = applyEmotionColors(request.emotions);
+      sendResponse({ success: true, count: result });
     } else if (request.action === 'clearHighlights') {
-      // Clear existing highlights
-      clearAllHighlights();
-      sendResponse({ success: true });
+      const count = clearAllHighlights();
+      sendResponse({ success: true, count: count });
     }
   } catch (error) {
     console.error('Content script error:', error);
@@ -25,7 +148,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Extract text content from the page with better structure preservation
+// Extract meaningful text content from the page
 function extractPageText() {
   try {
     if (!document.body) {
@@ -33,25 +156,24 @@ function extractPageText() {
       return '';
     }
     
-    // Get text from meaningful elements while preserving structure
+    // Get text from meaningful elements
     const meaningfulElements = document.querySelectorAll(
-      'p, h1, h2, h3, h4, h5, h6, span, div, a, li, td, th, blockquote, article, section'
+      'p, h1, h2, h3, h4, h5, h6, span:not(.emotion-highlight), div, a, li, td, th, blockquote, article, section'
     );
     
     const textBlocks = [];
+    const seenTexts = new Set();
     
     meaningfulElements.forEach(element => {
-      // Skip if element is inside script, style, or already processed
-      if (isSkippableElement(element)) return;
+      // Skip if element should be ignored
+      if (shouldSkipElement(element)) return;
       
       const text = element.textContent?.trim();
-      if (text && text.length > 20 && text.length < 500) {
-        // Avoid duplicates by checking if this text is already captured
-        const isDuplicate = textBlocks.some(block => 
-          block.includes(text) || text.includes(block)
-        );
-        
-        if (!isDuplicate) {
+      if (text && text.length > 15 && text.length < 500) {
+        // Avoid duplicates
+        const textKey = text.toLowerCase().substring(0, 50);
+        if (!seenTexts.has(textKey)) {
+          seenTexts.add(textKey);
           textBlocks.push(text);
         }
       }
@@ -66,17 +188,20 @@ function extractPageText() {
   }
 }
 
-// Check if element should be skipped
-function isSkippableElement(element) {
+// Check if element should be skipped during text extraction
+function shouldSkipElement(element) {
   if (!element || !element.parentElement) return true;
   
   // Skip script, style, and other non-content elements
-  const skipTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'SVG', 'CANVAS'];
+  const skipTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'SVG', 'CANVAS', 'NAV', 'HEADER', 'FOOTER'];
   if (skipTags.includes(element.tagName)) return true;
+  
+  // Skip already highlighted elements
+  if (element.classList.contains('emotion-highlight')) return true;
   
   // Skip if parent is skippable
   let parent = element.parentElement;
-  while (parent) {
+  while (parent && parent !== document.body) {
     if (skipTags.includes(parent.tagName)) return true;
     if (parent.classList.contains('emotion-highlight')) return true;
     parent = parent.parentElement;
@@ -89,13 +214,13 @@ function isSkippableElement(element) {
   return false;
 }
 
-// Apply emotion colors with improved text matching and layout preservation
+// Apply emotion colors to the page
 function applyEmotionColors(emotions) {
-  console.log('Content script: Applying emotions:', emotions?.length || 0);
+  console.log('Applying emotions:', emotions?.length || 0);
   
   if (!emotions || emotions.length === 0) {
     showNotification('No emotions to apply', 'error');
-    return;
+    return 0;
   }
   
   // Clear existing highlights first
@@ -104,7 +229,7 @@ function applyEmotionColors(emotions) {
   // Show processing notification
   showNotification(`Processing ${emotions.length} emotion blocks...`, 'info');
   
-  // Define emotion colors with better contrast
+  // Define emotion colors
   const emotionColors = {
     happy: { bg: '#FFF9C4', border: '#F59E0B' },
     excited: { bg: '#FFF9C4', border: '#F59E0B' },
@@ -112,24 +237,19 @@ function applyEmotionColors(emotions) {
     angry: { bg: '#FEE2E2', border: '#EF4444' },
     frustrated: { bg: '#FEE2E2', border: '#EF4444' },
     love: { bg: '#FCE7F3', border: '#EC4899' },
-    fear: { bg: '#EDE9FE', border: '#8B5CF6' },
     worried: { bg: '#EDE9FE', border: '#8B5CF6' },
-    neutral: { bg: '#F3F4F6', border: '#6B7280' },
     calm: { bg: '#F3F4F6', border: '#6B7280' },
-    surprise: { bg: '#FED7AA', border: '#F97316' },
     surprised: { bg: '#FED7AA', border: '#F97316' },
-    disgust: { bg: '#E7E5E4', border: '#78716C' },
-    trust: { bg: '#D1FAE5', border: '#10B981' },
-    trusting: { bg: '#D1FAE5', border: '#10B981' },
-    anticipation: { bg: '#FECACA', border: '#F87171' }
+    trusting: { bg: '#D1FAE5', border: '#10B981' }
   };
 
   let totalHighlighted = 0;
   const processedTexts = new Set();
 
-  // Process each emotion with improved matching
+  // Process each emotion
   emotions.forEach(({ text: emotionText, emotion }, index) => {
-    if (!emotionText || emotionText.length < 10) return;
+    if (!emotionText || emotionText.length < 15) return;
+    if (totalHighlighted >= 15) return; // Limit total highlights
     
     // Avoid processing duplicate texts
     const textKey = emotionText.toLowerCase().trim();
@@ -137,12 +257,10 @@ function applyEmotionColors(emotions) {
     processedTexts.add(textKey);
     
     const colors = emotionColors[emotion.toLowerCase()] || emotionColors.calm;
-    const highlighted = highlightTextImproved(emotionText, colors, emotion);
-    totalHighlighted += highlighted;
-    
-    // Add small delay to prevent blocking
-    if (index % 10 === 0) {
-      setTimeout(() => {}, 1);
+    const highlighted = highlightText(emotionText, colors, emotion);
+    if (highlighted) {
+      totalHighlighted++;
+      console.log(`✓ Highlighted: "${emotionText.substring(0, 30)}..." as ${emotion}`);
     }
   });
 
@@ -156,84 +274,105 @@ function applyEmotionColors(emotions) {
       showNotification('No matching text found to highlight', 'warning');
     }
   }, 500);
+  
+  return totalHighlighted;
 }
 
-// Improved text highlighting with better matching and layout preservation
-function highlightTextImproved(searchText, colors, emotion) {
-  if (!searchText || searchText.length < 10) return 0;
+// Highlight specific text on the page
+function highlightText(searchText, colors, emotion) {
+  const searchWords = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  const minWordMatch = Math.max(2, Math.ceil(searchWords.length * 0.6));
   
-  console.log(`Highlighting: "${searchText.substring(0, 50)}..." (${emotion})`);
-  
-  let highlightedCount = 0;
-  
-  // Clean and prepare search text
-  const cleanSearch = searchText.toLowerCase().trim();
-  const searchWords = cleanSearch.split(/\s+/).filter(w => w.length > 2);
-  
-  // Find all text nodes that could contain this text
+  // Get all text nodes
   const textNodes = getAllTextNodes();
   
-  textNodes.forEach(node => {
-    if (highlightedCount >= 3) return; // Limit highlights per emotion to prevent over-highlighting
+  // Find best matching text node
+  let bestMatch = null;
+  let bestScore = 0;
+  
+  textNodes.forEach(textNode => {
+    const nodeText = textNode.nodeValue.toLowerCase();
     
-    const nodeText = node.textContent;
-    const cleanNode = nodeText.toLowerCase().trim();
+    // Direct substring match (highest priority)
+    if (nodeText.includes(searchText.toLowerCase())) {
+      if (!bestMatch || searchText.length > bestScore) {
+        bestMatch = textNode;
+        bestScore = searchText.length;
+      }
+      return;
+    }
     
-    if (shouldHighlightNode(cleanNode, cleanSearch, searchWords)) {
-      const success = wrapTextNode(node, colors, emotion);
-      if (success) {
-        highlightedCount++;
-        console.log(`✓ Highlighted: "${nodeText.substring(0, 30)}..."`);
+    // Word-based matching
+    const matchingWords = searchWords.filter(word => nodeText.includes(word));
+    if (matchingWords.length >= minWordMatch) {
+      const score = matchingWords.length;
+      if (score > bestScore) {
+        bestMatch = textNode;
+        bestScore = score;
       }
     }
   });
   
-  return highlightedCount;
-}
-
-// Improved text matching logic
-function shouldHighlightNode(nodeText, searchText, searchWords) {
-  // Direct substring match
-  if (nodeText.includes(searchText)) return true;
-  
-  // Word overlap match (at least 60% of words should match)
-  if (searchWords.length > 2) {
-    const matchingWords = searchWords.filter(word => nodeText.includes(word));
-    if (matchingWords.length >= Math.ceil(searchWords.length * 0.6)) return true;
+  // Highlight the best match
+  if (bestMatch) {
+    return wrapTextNode(bestMatch, colors, emotion);
   }
-  
-  // Reverse match for shorter nodes
-  if (nodeText.length > 20 && searchText.includes(nodeText)) return true;
   
   return false;
 }
 
-// Safely wrap text node without breaking layout
+// Get all valid text nodes
+function getAllTextNodes() {
+  const textNodes = [];
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        // Skip empty or very short text
+        if (!node.nodeValue?.trim() || node.nodeValue.trim().length < 10) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        
+        // Skip if parent is not suitable
+        const parent = node.parentElement;
+        if (!parent || shouldSkipElement(parent)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+  
+  let node;
+  while (node = walker.nextNode()) {
+    textNodes.push(node);
+  }
+  
+  return textNodes;
+}
+
+// Wrap text node with highlight
 function wrapTextNode(textNode, colors, emotion) {
   try {
     const parent = textNode.parentElement;
     if (!parent || parent.classList.contains('emotion-highlight')) return false;
     
-    // Check if parent is suitable for highlighting
-    if (!isSuitableForHighlighting(parent)) return false;
-    
     // Create highlight wrapper
     const wrapper = document.createElement('span');
     wrapper.className = 'emotion-highlight';
     wrapper.setAttribute('data-emotion', emotion);
-    wrapper.setAttribute('data-original-text', textNode.textContent.substring(0, 100));
     
-    // Apply styles that preserve layout
+    // Apply styles
     wrapper.style.cssText = `
       background-color: ${colors.bg} !important;
       border-left: 3px solid ${colors.border} !important;
-      padding: 1px 3px !important;
+      padding: 2px 4px !important;
       border-radius: 3px !important;
       display: inline !important;
       position: relative !important;
       transition: all 0.2s ease !important;
-      box-decoration-break: clone !important;
-      -webkit-box-decoration-break: clone !important;
       line-height: inherit !important;
       font-size: inherit !important;
       font-family: inherit !important;
@@ -241,6 +380,7 @@ function wrapTextNode(textNode, colors, emotion) {
       color: inherit !important;
       text-decoration: inherit !important;
       margin: 0 !important;
+      box-sizing: border-box !important;
     `;
     
     // Insert wrapper and move text node
@@ -257,27 +397,10 @@ function wrapTextNode(textNode, colors, emotion) {
   }
 }
 
-// Check if element is suitable for highlighting
-function isSuitableForHighlighting(element) {
-  // Skip certain elements that might break layout
-  const unsuitableTags = ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'CODE', 'PRE'];
-  if (unsuitableTags.includes(element.tagName)) return false;
-  
-  // Skip elements with certain classes
-  const unsuitableClasses = ['btn', 'button', 'nav', 'menu', 'toolbar'];
-  if (unsuitableClasses.some(cls => element.classList.contains(cls))) return false;
-  
-  // Skip very small elements
-  const rect = element.getBoundingClientRect();
-  if (rect.width < 50 || rect.height < 20) return false;
-  
-  return true;
-}
-
 // Add hover effects to highlighted elements
 function addHoverEffects(wrapper, colors, emotion) {
   wrapper.addEventListener('mouseenter', () => {
-    wrapper.style.backgroundColor = colors.border + '20';
+    wrapper.style.backgroundColor = colors.border + '30';
     wrapper.style.transform = 'scale(1.02)';
     wrapper.style.zIndex = '1000';
     showTooltip(wrapper, emotion);
@@ -297,95 +420,54 @@ function showTooltip(element, emotion) {
   
   const tooltip = document.createElement('div');
   tooltip.className = 'emotion-tooltip';
-  tooltip.textContent = `Emotion: ${emotion.charAt(0).toUpperCase() + emotion.slice(1)}`;
+  tooltip.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
   
   tooltip.style.cssText = `
     position: absolute;
     background: rgba(0, 0, 0, 0.9);
     color: white;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
-    z-index: 10000;
+    z-index: 10001;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: Arial, sans-serif;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
   `;
   
-  document.body.appendChild(tooltip);
-  
-  // Position tooltip
-  const rect = element.getBoundingClientRect();
-  const tooltipRect = tooltip.getBoundingClientRect();
-  
-  let top = rect.top - tooltipRect.height - 8;
-  let left = rect.left + (rect.width - tooltipRect.width) / 2;
-  
-  // Adjust if tooltip goes off screen
-  if (top < 0) top = rect.bottom + 8;
-  if (left < 0) left = 8;
-  if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 8;
-  
-  tooltip.style.top = top + window.scrollY + 'px';
-  tooltip.style.left = left + window.scrollX + 'px';
+  element.appendChild(tooltip);
 }
 
 // Hide tooltip
 function hideTooltip() {
-  const existing = document.querySelector('.emotion-tooltip');
-  if (existing) existing.remove();
-}
-
-// Get all text nodes efficiently
-function getAllTextNodes() {
-  const textNodes = [];
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function(node) {
-        // Skip empty or very short text
-        if (!node.nodeValue?.trim() || node.nodeValue.trim().length < 10) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        // Skip if parent is not suitable
-        const parent = node.parentElement;
-        if (!parent || isSkippableElement(parent)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-  
-  let node;
-  while (node = walker.nextNode()) {
-    textNodes.push(node);
-  }
-  
-  return textNodes;
+  const existing = document.querySelectorAll('.emotion-tooltip');
+  existing.forEach(tooltip => tooltip.remove());
 }
 
 // Clear all existing highlights
 function clearAllHighlights() {
   const highlights = document.querySelectorAll('.emotion-highlight');
+  let count = 0;
+  
   highlights.forEach(highlight => {
-    // Move children out of highlight wrapper
+    const parent = highlight.parentNode;
     while (highlight.firstChild) {
-      highlight.parentNode.insertBefore(highlight.firstChild, highlight);
+      parent.insertBefore(highlight.firstChild, highlight);
     }
-    // Remove the wrapper
-    highlight.remove();
+    parent.removeChild(highlight);
+    count++;
   });
   
-  // Remove any tooltips
-  hideTooltip();
+  // Remove any tooltips and notifications
+  document.querySelectorAll('.emotion-tooltip, .emotion-notification').forEach(el => el.remove());
   
-  console.log(`Cleared ${highlights.length} existing highlights`);
+  console.log(`Cleared ${count} existing highlights`);
+  return count;
 }
 
 // Show notification to user
@@ -415,24 +497,13 @@ function showNotification(message, type = 'info') {
     padding: 12px 20px;
     border-radius: 8px;
     z-index: 999999;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 14px;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     max-width: 300px;
     word-wrap: break-word;
-    animation: slideIn 0.3s ease;
   `;
-  
-  // Add slide-in animation
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(style);
   
   notification.textContent = message;
   document.body.appendChild(notification);
@@ -440,28 +511,7 @@ function showNotification(message, type = 'info') {
   // Auto remove after 3 seconds
   setTimeout(() => {
     if (notification.parentNode) {
-      notification.style.animation = 'slideIn 0.3s ease reverse';
-      setTimeout(() => notification.remove(), 300);
+      notification.remove();
     }
   }, 3000);
-}
-
-// Initialize content script
-if (!window.whatMyPageFeelingLoaded) {
-  window.whatMyPageFeelingLoaded = true;
-  console.log('What My Page Feeling content script loaded successfully');
-  
-  // Add global styles for highlights
-  const globalStyles = document.createElement('style');
-  globalStyles.textContent = `
-    .emotion-highlight {
-      box-sizing: border-box !important;
-    }
-    .emotion-highlight:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-    }
-  `;
-  document.head.appendChild(globalStyles);
-  
-  console.log('Content script ready for emotion analysis');
 }
