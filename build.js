@@ -89,4 +89,4 @@ console.log('1. Open Chrome and go to chrome://extensions/');
 console.log('2. Enable "Developer mode"');
 console.log('3. Click "Load unpacked"');
 console.log('4. Select the "dist" folder from:', path.join(__dirname, 'dist'));
-console.log('\n🔑 Remember to add your Gemini API key when using the extension!');
+console.log('\n🚀 The extension is ready to use immediately!');

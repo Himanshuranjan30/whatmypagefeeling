@@ -9,7 +9,7 @@ A Chrome extension for marketers, writers & content creators that instantly anal
 - 🎨 **Comprehensive visualization** - Every text element gets color-coded by emotion
 - 💼 **Perfect for professionals** - Built for marketers, writers & content creators
 - 🚀 **Real results** - Users report 17%+ conversion improvements
-- ⚡ **No setup required** - Just add your API key and start analyzing
+- ⚡ **No setup required** - Works instantly, no configuration needed
 - 🎨 **10 emotion types** - Happy, sad, angry, love, worried, calm, and more
 
 ## Use Cases
@@ -47,11 +47,7 @@ A Chrome extension for marketers, writers & content creators that instantly anal
 
 ## Setup
 
-1. Click on the extension icon to open the popup
-
-2. Enter your Gemini API key (Get one from [Google AI Studio](https://makersuite.google.com/app/apikey))
-
-3. Click "Save" to store your API key securely
+No setup required! The extension is ready to use immediately.
 
 ## Usage
 
@@ -128,15 +124,16 @@ To modify the extension:
 
 ## Privacy
 
-- Your Gemini API key is stored locally in Chrome's secure storage
-- No data is sent to any server except Google's Gemini API
+- No personal data is stored or collected
+- Page content is sent only to Google's Gemini API for analysis
 - The extension only analyzes content when you explicitly click "Analyze Page"
+- Analysis happens in real-time and no data is retained
 
 ## Troubleshooting
 
-- **Extension not working?** Make sure you've entered a valid Gemini API key
+- **Extension not working?** Try refreshing the page and clicking analyze again
 - **No highlights appearing?** Some websites may have restrictive content security policies
-- **API errors?** Check your API key and ensure you have quota remaining
+- **API errors?** The service might be temporarily unavailable, try again in a moment
 
 ## Future Improvements
 

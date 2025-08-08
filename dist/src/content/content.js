@@ -105,10 +105,13 @@ function applyEmotionColors(emotions) {
 function highlightText(searchText, color, emotion) {
   if (!searchText || searchText.length < 10) return 0;
   
+  console.log(`Searching for: "${searchText}" (emotion: ${emotion})`);
+  
   let highlightedCount = 0;
   
   // Get all text nodes
   const textNodes = getTextNodes(document.body);
+  console.log(`Found ${textNodes.length} text nodes on page`);
   
   // Clean search text for matching
   const cleanSearch = searchText.toLowerCase().trim();
@@ -140,6 +143,8 @@ function highlightText(searchText, color, emotion) {
     }
     
     if (isMatch && !node.parentElement.classList.contains('emotion-highlight')) {
+      console.log(`Highlighting match: "${nodeText.substring(0, 50)}..." with emotion: ${emotion}`);
+      
       // Create wrapper span
       const span = document.createElement('span');
       span.className = 'emotion-highlight';
@@ -153,9 +158,13 @@ function highlightText(searchText, color, emotion) {
       `;
       
       // Wrap the text node
-      node.parentNode.insertBefore(span, node);
-      span.appendChild(node);
-      highlightedCount++;
+      try {
+        node.parentNode.insertBefore(span, node);
+        span.appendChild(node);
+        highlightedCount++;
+      } catch (e) {
+        console.error('Error wrapping node:', e);
+      }
     }
   });
   

@@ -14,7 +14,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Analyze text with Gemini API
 async function analyzeTextWithGemini(content, apiKey) {
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // Use hardcoded API key
+  const GEMINI_API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   
   // Truncate content if too long (Gemini has token limits)
   const maxLength = 30000; // Increased for better analysis
