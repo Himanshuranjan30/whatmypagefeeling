@@ -21,7 +21,7 @@ analyzeBtn.addEventListener('click', async () => {
       function: extractPageTextDirect
     });
     
-    const pageText = results[0].result;
+    const pageText = results && results[0] && results[0].result ? results[0].result : '';
     
     if (!pageText || pageText.trim().length === 0) {
       showStatus('No text found on page', 'error');
