@@ -251,5 +251,19 @@ function removeExistingEmotionSpans() {
   });
 }
 
-// Log that the content script is loaded
-console.log('What My Page Feeling content script loaded successfully');
+// Ensure we only run once
+if (window.whatMyPageFeelingLoaded) {
+  console.log('Content script already loaded, skipping...');
+} else {
+  window.whatMyPageFeelingLoaded = true;
+  console.log('What My Page Feeling content script loaded successfully');
+  
+  // Signal that we're ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM fully loaded, content script ready');
+    });
+  } else {
+    console.log('DOM already loaded, content script ready');
+  }
+}
