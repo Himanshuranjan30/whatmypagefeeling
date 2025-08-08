@@ -1,11 +1,20 @@
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background script received message:', request.action);
+  
   if (request.action === 'analyzeEmotions') {
+    if (!request.content || request.content.trim().length === 0) {
+      sendResponse({ error: 'No content to analyze' });
+      return;
+    }
+    
     analyzeTextWithGemini(request.content, request.apiKey)
       .then(emotions => {
+        console.log('Analysis complete, returning', emotions.length, 'emotions');
         sendResponse({ emotions: emotions });
       })
       .catch(error => {
+        console.error('Analysis error:', error);
         sendResponse({ error: error.message });
       });
     return true; // Keep the message channel open for async response

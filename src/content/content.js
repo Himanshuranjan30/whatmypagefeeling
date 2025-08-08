@@ -1,34 +1,61 @@
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'getPageContent') {
-    // Get all text content from the page
-    const content = extractPageText();
-    sendResponse({ content: content });
-  } else if (request.action === 'applyEmotionColors') {
-    // Apply emotion colors to the page
-    applyEmotionColors(request.emotions);
-    sendResponse({ success: true });
+  console.log('Content script received message:', request.action);
+  
+  try {
+    if (request.action === 'getPageContent') {
+      // Get all text content from the page
+      const content = extractPageText();
+      console.log('Extracted content length:', content.length);
+      sendResponse({ content: content });
+    } else if (request.action === 'applyEmotionColors') {
+      // Apply emotion colors to the page
+      applyEmotionColors(request.emotions);
+      sendResponse({ success: true });
+    }
+  } catch (error) {
+    console.error('Content script error:', error);
+    sendResponse({ error: error.message });
   }
+  
   return true;
 });
 
 // Extract text content from the page
 function extractPageText() {
-  // Get all text from body, excluding scripts and styles
-  const bodyClone = document.body.cloneNode(true);
-  
-  // Remove script and style elements
-  const scripts = bodyClone.querySelectorAll('script, style, noscript');
-  scripts.forEach(el => el.remove());
-  
-  // Get text content
-  const text = bodyClone.textContent || bodyClone.innerText || '';
-  
-  // Clean up the text
-  return text
-    .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-    .replace(/\n+/g, ' ')  // Replace newlines with space
-    .trim();
+  try {
+    // Check if document.body exists
+    if (!document.body) {
+      console.warn('No document body found');
+      return '';
+    }
+    
+    // Get all text from body, excluding scripts and styles
+    const bodyClone = document.body.cloneNode(true);
+    
+    // Remove script and style elements
+    const scripts = bodyClone.querySelectorAll('script, style, noscript, iframe');
+    scripts.forEach(el => el.remove());
+    
+    // Also remove common non-content elements
+    const nonContent = bodyClone.querySelectorAll('.ad, .advertisement, .sidebar, .footer, .header, nav, .nav');
+    nonContent.forEach(el => el.remove());
+    
+    // Get text content
+    const text = bodyClone.textContent || bodyClone.innerText || '';
+    
+    // Clean up the text
+    const cleanedText = text
+      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+      .replace(/\n+/g, ' ')  // Replace newlines with space
+      .trim();
+    
+    console.log('Text extraction complete. Length:', cleanedText.length);
+    return cleanedText;
+  } catch (error) {
+    console.error('Error extracting page text:', error);
+    return '';
+  }
 }
 
 // Apply emotion colors to text nodes
@@ -223,3 +250,6 @@ function removeExistingEmotionSpans() {
     span.parentNode.removeChild(span);
   });
 }
+
+// Log that the content script is loaded
+console.log('What My Page Feeling content script loaded successfully');
