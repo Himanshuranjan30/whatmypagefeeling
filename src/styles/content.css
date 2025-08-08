@@ -1,45 +1,78 @@
-/* Emotion highlight styles */
+/* Enhanced emotion highlight styles with better layout preservation */
 .emotion-highlight {
-  background-color: var(--emotion-color);
-  padding: 2px 4px !important;
-  border-radius: 4px !important;
+  background-color: var(--emotion-bg, #F3F4F6) !important;
+  border-left: 3px solid var(--emotion-border, #6B7280) !important;
+  padding: 1px 3px !important;
+  border-radius: 3px !important;
   display: inline !important;
   position: relative !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.2s ease !important;
+  box-decoration-break: clone !important;
+  -webkit-box-decoration-break: clone !important;
+  
+  /* Preserve original text properties */
+  line-height: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  text-decoration: inherit !important;
+  letter-spacing: inherit !important;
+  word-spacing: inherit !important;
+  
+  /* Ensure no layout disruption */
+  margin: 0 !important;
+  vertical-align: baseline !important;
+  box-sizing: border-box !important;
 }
 
+/* Hover effects that don't break layout */
 .emotion-highlight:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 10;
+  transform: scale(1.02) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  z-index: 10 !important;
 }
 
-/* Tooltip for emotion highlights */
-.emotion-highlight::after {
-  content: attr(data-emotion);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
-  z-index: 10000;
-  margin-bottom: 4px;
+/* Tooltip styles */
+.emotion-tooltip {
+  position: absolute !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  color: white !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  
+  /* Positioning */
+  top: -30px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
 }
 
-.emotion-highlight:hover::after {
-  opacity: 1;
+/* Notification styles */
+.emotion-notification {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  z-index: 999999 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  max-width: 300px !important;
+  word-wrap: break-word !important;
+  pointer-events: none !important;
 }
 
-/* Animation */
-@keyframes fadeIn {
+/* Animation for highlights appearing */
+@keyframes highlightFadeIn {
   from {
     opacity: 0;
     background-color: transparent;
@@ -50,10 +83,91 @@
 }
 
 .emotion-highlight {
-  animation: fadeIn 0.5s ease;
+  animation: highlightFadeIn 0.3s ease !important;
 }
 
-/* Ensure proper text color contrast */
+/* Ensure highlights work well with different text elements */
+h1 .emotion-highlight,
+h2 .emotion-highlight,
+h3 .emotion-highlight,
+h4 .emotion-highlight,
+h5 .emotion-highlight,
+h6 .emotion-highlight {
+  font-weight: inherit !important;
+  font-size: inherit !important;
+}
+
+p .emotion-highlight,
+span .emotion-highlight,
+div .emotion-highlight {
+  line-height: inherit !important;
+}
+
+a .emotion-highlight {
+  text-decoration: inherit !important;
+  color: inherit !important;
+}
+
+/* Ensure highlights don't interfere with flex/grid layouts */
 .emotion-highlight {
-  color: #000 !important;
+  flex: none !important;
+  grid-area: auto !important;
+}
+
+/* Better contrast for different backgrounds */
+.emotion-highlight {
+  mix-blend-mode: multiply !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .emotion-highlight {
+    padding: 1px 2px !important;
+  }
+  
+  .emotion-tooltip {
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+  }
+  
+  .emotion-notification {
+    right: 10px !important;
+    top: 10px !important;
+    max-width: 250px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .emotion-highlight {
+    border-width: 2px !important;
+    padding: 2px 4px !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .emotion-highlight {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .emotion-highlight:hover {
+    transform: none !important;
+  }
+}
+
+/* Print styles - hide highlights when printing */
+@media print {
+  .emotion-highlight {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  
+  .emotion-tooltip,
+  .emotion-notification {
+    display: none !important;
+  }
 }

@@ -1,57 +1,94 @@
-// Listen for messages from popup
+// Background script for What My Page Feeling extension
+console.log('Background script loaded');
+
+// Listen for extension installation
+chrome.runtime.onInstalled.addListener((details) => {
+  console.log('Extension installed:', details.reason);
+  
+  if (details.reason === 'install') {
+    // Set default settings
+    chrome.storage.local.set({
+      highlightEnabled: true,
+      maxHighlights: 25,
+      showTooltips: true
+    });
+  }
+});
+
+// Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Background script received message:', request.action);
+  console.log('Background received message:', request.action);
   
   if (request.action === 'analyzeEmotions') {
+    handleEmotionAnalysis(request, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+  
+  if (request.action === 'getSettings') {
+    chrome.storage.local.get(['highlightEnabled', 'maxHighlights', 'showTooltips'], (result) => {
+      sendResponse(result);
+    });
+    return true;
+  }
+  
+  if (request.action === 'saveSettings') {
+    chrome.storage.local.set(request.settings, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+});
+
+// Handle emotion analysis with improved error handling
+async function handleEmotionAnalysis(request, sendResponse) {
+  try {
     if (!request.content || request.content.trim().length === 0) {
       sendResponse({ error: 'No content to analyze' });
       return;
     }
     
-    analyzeTextWithGemini(request.content, request.apiKey)
-      .then(emotions => {
-        console.log('Analysis complete, returning', emotions.length, 'emotions');
-        sendResponse({ emotions: emotions });
-      })
-      .catch(error => {
-        console.error('Analysis error:', error);
-        sendResponse({ error: error.message });
-      });
-    return true; // Keep the message channel open for async response
+    console.log('Starting emotion analysis...');
+    const emotions = await analyzeTextWithGemini(request.content);
+    console.log('Analysis complete:', emotions.length, 'emotions found');
+    
+    sendResponse({ emotions: emotions });
+  } catch (error) {
+    console.error('Analysis error:', error);
+    sendResponse({ error: error.message });
   }
-});
+}
 
-// Analyze text with Gemini API
-async function analyzeTextWithGemini(content, apiKey) {
-  // Use hardcoded API key
+// Improved Gemini API integration
+async function analyzeTextWithGemini(content) {
   const GEMINI_API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   
-  // Truncate content if too long (Gemini has token limits)
-  const maxLength = 30000; // Increased for better analysis
+  // Prepare content with length limit
+  const maxLength = 25000;
   const truncatedContent = content.length > maxLength 
     ? content.substring(0, maxLength) + '...' 
     : content;
   
-  const prompt = `Analyze the emotional content of this webpage text and identify emotions in different sections.
+  const prompt = `Analyze the emotional content of this webpage and identify text sections with clear emotional tones.
 
-For each meaningful section of text, provide:
-1. A representative text snippet from that section (keep it 10-50 words)
-2. The dominant emotion for that section
+Extract 15-25 meaningful text snippets that express emotions. For each snippet:
+1. Use the EXACT text from the content (10-100 words)
+2. Identify the primary emotion
 
-Use these emotions: happy, excited, sad, angry, frustrated, love, worried, surprised, disgust, trusting, anticipation, calm
+Available emotions: happy, excited, sad, angry, frustrated, love, worried, surprised, calm, trusting
 
-Return a JSON array like this:
+Return ONLY a valid JSON array:
 [
-  {"text": "actual text from the page", "emotion": "happy"},
-  {"text": "another section of text", "emotion": "sad"}
+  {"text": "exact text from webpage", "emotion": "happy"},
+  {"text": "another text snippet", "emotion": "worried"}
 ]
 
-Rules:
-- Extract ACTUAL text snippets from the content, don't paraphrase
-- Keep snippets short but meaningful (10-50 words)
-- Cover different sections of the content
-- Return 10-50 results depending on content length
+Important rules:
+- Use EXACT text from the content, don't rephrase
+- Skip navigation menus, headers, and technical content
+- Focus on content with clear emotional expression
+- Each text snippet should be 10-100 words
+- Return 15-25 results maximum
 
 Content to analyze:
 ${truncatedContent}`;
@@ -69,56 +106,120 @@ ${truncatedContent}`;
           }]
         }],
         generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-        }
+          temperature: 0.4,
+          topK: 30,
+          topP: 0.8,
+          maxOutputTokens: 4096,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH", 
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to analyze emotions');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
     }
 
     const data = await response.json();
-    const generatedText = data.candidates[0].content.parts[0].text;
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response from AI model');
+    }
+    
+    const candidate = data.candidates[0];
+    if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      throw new Error('Invalid response structure from AI');
+    }
+    
+    const generatedText = candidate.content.parts[0].text;
+    console.log('AI response received, length:', generatedText.length);
     
     // Extract JSON from the response
     const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      throw new Error('Failed to parse emotion data from response');
+      console.error('No JSON found in response:', generatedText);
+      throw new Error('Could not extract emotion data from AI response');
     }
     
     try {
       const emotions = JSON.parse(jsonMatch[0]);
       
-      // Validate and clean the emotions array
+      // Validate emotions array
+      if (!Array.isArray(emotions)) {
+        throw new Error('Response is not an array');
+      }
+      
+      // Clean and validate each emotion entry
       const validEmotions = ['happy', 'excited', 'sad', 'angry', 'frustrated', 
-                              'love', 'worried', 'surprised', 'disgust', 'trusting', 
-                              'anticipation', 'calm', 'neutral'];
+                              'love', 'worried', 'surprised', 'calm', 'trusting'];
       
       const validatedEmotions = emotions
-        .filter(item => item.text && item.emotion)
+        .filter(item => {
+          return item && 
+                 typeof item === 'object' && 
+                 typeof item.text === 'string' && 
+                 typeof item.emotion === 'string' &&
+                 item.text.trim().length >= 10 &&
+                 item.text.trim().length <= 200;
+        })
         .map(item => ({
           text: item.text.trim(),
           emotion: validEmotions.includes(item.emotion.toLowerCase()) 
                    ? item.emotion.toLowerCase() 
                    : 'calm'
         }))
-        .slice(0, 100); // Limit to 100 emotion blocks
+        .slice(0, 25); // Limit to 25 emotions
       
-      console.log('Validated emotions count:', validatedEmotions.length);
-      console.log('Sample emotions:', validatedEmotions.slice(0, 3));
+      console.log(`Validated ${validatedEmotions.length} emotions from ${emotions.length} raw results`);
+      
+      if (validatedEmotions.length === 0) {
+        throw new Error('No valid emotions found in the analysis');
+      }
       
       return validatedEmotions;
+      
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
-      throw new Error('Failed to parse emotion data');
+      console.error('Attempted to parse:', jsonMatch[0].substring(0, 500));
+      throw new Error('Failed to parse emotion analysis results');
     }
+    
   } catch (error) {
     console.error('Gemini API Error:', error);
-    throw error;
+    
+    // Provide more specific error messages
+    if (error.message.includes('API_KEY')) {
+      throw new Error('API key issue - please check configuration');
+    } else if (error.message.includes('quota')) {
+      throw new Error('API quota exceeded - please try again later');
+    } else if (error.message.includes('network')) {
+      throw new Error('Network error - please check your connection');
+    } else {
+      throw new Error(`Analysis failed: ${error.message}`);
+    }
   }
 }
+
+// Handle tab updates to inject content script if needed
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
+    // Content script will be injected when needed via executeScript
+    console.log('Tab updated:', tab.url);
+  }
+});
+
+// Error handling for unhandled promise rejections
+self.addEventListener('unhandledrejection', event => {
+  console.error('Unhandled promise rejection:', event.reason);
+});
+
+console.log('Background script initialization complete');
