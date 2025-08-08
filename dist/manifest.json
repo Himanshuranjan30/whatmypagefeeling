@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PagePulse - Page Sentiment Analyzer",
   "version": "1.0.0",
-  "description": "Instantly analyze the emotional tone and sentiment of any webpage. Perfect for marketers, writers, and content creators who want to understand how their content feels to readers.",
+  "description": "Instantly analyze emotional tone and sentiment of any webpage. Perfect for marketers, writers, and content creators.",
   "permissions": [
     "activeTab",
     "storage",
