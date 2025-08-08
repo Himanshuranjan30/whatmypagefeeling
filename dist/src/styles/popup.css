@@ -58,15 +58,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .logo {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
 .header h1 {
