@@ -107,8 +107,14 @@ async function analyzeContent(content, apiKey, tabId) {
         chrome.tabs.sendMessage(tabId, {
           action: 'applyEmotionColors',
           emotions: response.emotions
-        }, () => {
-          showStatus('Analysis complete! Check the page.', 'success');
+        }, (result) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error applying emotions:', chrome.runtime.lastError);
+            showStatus('Error applying colors: ' + chrome.runtime.lastError.message, 'error');
+          } else {
+            showStatus(`Analysis complete! Found ${response.emotions.length} emotion blocks.`, 'success');
+            console.log('Applied emotions successfully');
+          }
         });
       }
     });

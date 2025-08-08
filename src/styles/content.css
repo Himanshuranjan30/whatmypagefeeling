@@ -1,9 +1,11 @@
 /* Emotion highlight styles */
 .emotion-highlight {
-  display: inline-block;
+  display: inline !important;
   position: relative;
   cursor: pointer;
   animation: fadeIn 0.5s ease;
+  word-wrap: break-word;
+  line-height: inherit !important;
 }
 
 @keyframes fadeIn {

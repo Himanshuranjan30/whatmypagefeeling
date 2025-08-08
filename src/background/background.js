@@ -17,30 +17,30 @@ async function analyzeTextWithGemini(content, apiKey) {
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
   
   // Truncate content if too long (Gemini has token limits)
-  const maxLength = 10000;
+  const maxLength = 30000; // Increased for better analysis
   const truncatedContent = content.length > maxLength 
     ? content.substring(0, maxLength) + '...' 
     : content;
   
-  const prompt = `Analyze the emotional content of this webpage text. Break it down into sentences or small phrases and assign an emotion to EACH one.
+  const prompt = `Analyze the emotional content of this webpage text. Focus on meaningful sentences and paragraphs.
 
-For EVERY sentence or meaningful phrase in the text, provide:
-1. The exact text (can be 1-100 words)
-2. The dominant emotion (choose from: happy, sad, angry, love, worried, surprised, disgust, trusting, anticipation, or calm)
+For each substantial text block (at least 20-30 words), provide:
+1. The exact text snippet (20-150 words)
+2. The dominant emotion (choose from: happy, excited, sad, angry, frustrated, love, worried, surprised, disgust, trusting, anticipation, or calm)
 
-Format your response as a JSON array covering ALL text:
+Format your response as a JSON array:
 [
-  {"text": "First sentence or phrase", "emotion": "happy"},
-  {"text": "Second sentence or phrase", "emotion": "calm"},
-  {"text": "Third sentence or phrase", "emotion": "sad"}
+  {"text": "meaningful sentence or paragraph here", "emotion": "happy"},
+  {"text": "another substantial text block", "emotion": "calm"}
 ]
 
 IMPORTANT RULES:
-- Cover EVERY sentence/phrase in the text, don't skip any
-- Assign "calm" if no clear emotion is present
-- Break long paragraphs into multiple entries
-- Include ALL text, even navigation items, headers, etc.
-- Return 50-200+ entries to cover the entire page
+- Focus on complete sentences and paragraphs, not fragments
+- Skip navigation items, single words, numbers, or very short phrases
+- Each text snippet should be substantial enough to convey emotion
+- Aim for 20-100 emotion blocks depending on page content
+- Prioritize main content over boilerplate text
+- If no clear emotion, use "calm"
 
 Text to analyze:
 ${truncatedContent}`;
@@ -84,13 +84,22 @@ ${truncatedContent}`;
       const emotions = JSON.parse(jsonMatch[0]);
       
       // Validate and clean the emotions array
+      const validEmotions = ['happy', 'excited', 'sad', 'angry', 'frustrated', 
+                              'love', 'worried', 'surprised', 'disgust', 'trusting', 
+                              'anticipation', 'calm', 'neutral'];
+      
       const validatedEmotions = emotions
-        .filter(item => item.text && item.emotion)
+        .filter(item => item.text && item.emotion && item.text.length > 20)
         .map(item => ({
           text: item.text.trim(),
-          emotion: item.emotion.toLowerCase()
+          emotion: validEmotions.includes(item.emotion.toLowerCase()) 
+                   ? item.emotion.toLowerCase() 
+                   : 'calm'
         }))
-        .slice(0, 500); // Limit to 500 emotions max to cover entire page
+        .slice(0, 200); // Limit to 200 meaningful emotion blocks
+      
+      console.log('Validated emotions count:', validatedEmotions.length);
+      console.log('Sample emotions:', validatedEmotions.slice(0, 3));
       
       return validatedEmotions;
     } catch (parseError) {
