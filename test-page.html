@@ -3,66 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Page for What My Page Feeling Extension</title>
+    <title>Test Page for What My Page Feeling - Emotion Analysis</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+            line-height: 1.7;
+            background: #fafafa;
         }
-        h1 {
-            color: #333;
+        .card {
+            background: white;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #007acc;
         }
-        .section {
-            margin: 30px 0;
-            padding: 20px;
-            border-radius: 8px;
+        .card.happy { border-left-color: #10b981; }
+        .card.sad { border-left-color: #3b82f6; }
+        .card.worried { border-left-color: #8b5cf6; }
+        .card.excited { border-left-color: #f59e0b; }
+        .card.angry { border-left-color: #ef4444; }
+        .card.calm { border-left-color: #6b7280; }
+        .card.love { border-left-color: #ec4899; }
+        .card.frustrated { border-left-color: #dc2626; }
+        .card.surprised { border-left-color: #f97316; }
+        .card.trusting { border-left-color: #059669; }
+        
+        h1 { color: #1f2937; text-align: center; margin-bottom: 40px; }
+        h2 { color: #374151; margin-top: 0; }
+        .instructions { 
+            background: #e5e7eb; 
+            padding: 20px; 
+            border-radius: 8px; 
+            text-align: center; 
+            font-weight: 500;
+            color: #374151;
         }
-        .happy-section {
-            background-color: #f0f8ff;
-        }
-        .sad-section {
-            background-color: #f5f5f5;
-        }
-        .angry-section {
-            background-color: #ffe6e6;
+        
+        .emotion-samples {
+            display: grid;
+            gap: 20px;
+            margin-top: 30px;
         }
     </style>
 </head>
 <body>
-    <h1>Welcome to Our Amazing Product!</h1>
+    <h1>🎭 Test Page for Emotion Analysis</h1>
     
-    <div class="section happy-section">
-        <h2>Exciting Features</h2>
-        <p>We are thrilled to announce our revolutionary new product that will make your life so much better! This incredible innovation brings joy and happiness to everything you do. You'll absolutely love the amazing features and the wonderful experience it provides.</p>
+    <div class="instructions">
+        <strong>📋 Testing Instructions:</strong> 
+        Click the "What My Page Feeling" extension icon in your browser toolbar, then press "Analyze This Page" to test the emotion highlighting functionality. Each section below contains different emotional content that should be detected and highlighted.
     </div>
     
-    <div class="section sad-section">
-        <h2>Understanding Your Pain Points</h2>
-        <p>We know how frustrating it can be when nothing seems to work the way you want it to. The disappointment and sadness that comes from failed attempts can be overwhelming. Many people struggle with these challenges and feel lost and hopeless.</p>
-    </div>
-    
-    <div class="section angry-section">
-        <h2>Stop Wasting Time!</h2>
-        <p>Are you tired of dealing with inferior products that don't deliver on their promises? It's infuriating when companies take advantage of customers and provide terrible service. This nonsense has to stop, and we're here to fight against these awful practices!</p>
-    </div>
-    
-    <div class="section">
-        <h2>Our Solution</h2>
-        <p>Our innovative approach combines cutting-edge technology with user-friendly design. We believe in creating products that genuinely help people achieve their goals. Trust us to deliver the quality and reliability you deserve.</p>
+    <div class="emotion-samples">
+        <div class="card happy">
+            <h2>😊 Happy & Joyful Content</h2>
+            <p>I'm absolutely thrilled to announce that we've achieved something incredible today! The joy I feel is overwhelming, and I can't wait to share this amazing news with everyone. This is the best day ever, and I'm filled with pure happiness and excitement! The celebration continues as we bask in this wonderful achievement that brings smiles to our faces.</p>
+            <p>What a fantastic outcome this has been! I'm beaming with pride and satisfaction, feeling grateful for all the positive energy and good vibes surrounding this moment.</p>
+        </div>
         
-        <p>Here's what makes us different: we listen to our customers, we care about quality, and we're committed to continuous improvement. Join thousands of satisfied users who have already discovered the difference.</p>
+        <div class="card sad">
+            <h2>😢 Sad & Melancholic Content</h2>
+            <p>It's with a heavy heart that I share this difficult news. The loss we've experienced is devastating, and the sadness feels unbearable right now. I'm struggling to find words that can express the depth of sorrow and grief that fills my heart today. The emptiness is overwhelming.</p>
+            <p>Tears flow freely as we remember what we've lost, and the pain seems to echo through every corner of our hearts. This profound sadness will take time to heal.</p>
+        </div>
+        
+        <div class="card worried">
+            <h2>😰 Worried & Anxious Content</h2>
+            <p>I'm genuinely concerned about what might happen next. The uncertainty is keeping me awake at night, and I can't stop thinking about all the things that could go wrong. This anxiety is consuming my thoughts, and I'm worried we're not prepared for what's coming.</p>
+            <p>The stress is building up, and I find myself constantly checking and double-checking everything. These troubling thoughts just won't leave me alone, creating a cycle of worry and apprehension.</p>
+        </div>
+        
+        <div class="card excited">
+            <h2>🎉 Excited & Enthusiastic Content</h2>
+            <p>I can barely contain my excitement about this upcoming adventure! The anticipation is electric, and I'm buzzing with energy just thinking about all the possibilities. This is going to be absolutely fantastic, and I'm so pumped to get started!</p>
+            <p>The enthusiasm is contagious, and I'm practically jumping out of my skin with anticipation! Every fiber of my being is energized and ready for this incredible journey ahead.</p>
+        </div>
+        
+        <div class="card angry">
+            <h2>😠 Angry & Frustrated Content</h2>
+            <p>This situation is absolutely infuriating and completely unacceptable! I'm furious about how this has been handled, and my anger is boiling over. The incompetence and disregard shown here is outrageous, and I demand immediate action to fix this mess!</p>
+            <p>My frustration levels are through the roof, and I'm fed up with these repeated failures. This negligence is maddening, and I refuse to tolerate such irresponsible behavior any longer!</p>
+        </div>
+        
+        <div class="card calm">
+            <h2>🧘 Calm & Peaceful Content</h2>
+            <p>In these peaceful moments, I find myself feeling serene and balanced. The tranquility surrounding me brings a sense of inner peace and contentment. Everything feels harmonious and well-ordered, creating a perfect atmosphere for reflection and mindfulness.</p>
+            <p>The gentle breeze of serenity flows through my thoughts, bringing clarity and composure. This state of calm allows for deep contemplation and restful meditation.</p>
+        </div>
+        
+        <div class="card love">
+            <h2>💕 Love & Affection Content</h2>
+            <p>My heart overflows with love and affection for those closest to me. The warmth of these feelings spreads through every part of my being, creating an unbreakable bond of care and devotion. This deep love brings meaning and purpose to every day.</p>
+            <p>The tender moments we share are precious beyond words, filled with compassion, understanding, and unconditional love that grows stronger with each passing day.</p>
+        </div>
+        
+        <div class="card surprised">
+            <h2>😲 Surprised & Amazed Content</h2>
+            <p>I can't believe what just happened! This unexpected turn of events has left me completely stunned and amazed. Never in my wildest dreams did I imagine something like this could occur. The surprise is absolutely mind-blowing!</p>
+            <p>My jaw is still on the floor from this incredible revelation. The shock of this discovery has turned my entire world upside down in the most astonishing way!</p>
+        </div>
+        
+        <div class="card trusting">
+            <h2>🤝 Trusting & Confident Content</h2>
+            <p>I have complete faith and trust in our team's ability to handle this challenge. The confidence I feel in our collective skills and dedication gives me great assurance that we'll succeed. This trust forms the foundation of our strong partnership.</p>
+            <p>With unwavering belief in our capabilities, I know we can overcome any obstacle. This reliable foundation of trust and confidence will guide us to victory.</p>
+        </div>
     </div>
     
-    <div class="section">
-        <h2>Get Started Today</h2>
-        <p>Ready to transform your experience? Click the button below to begin your journey with us. We're confident you'll be amazed by the results and grateful for making this choice.</p>
-        
-        <button style="background: #4CAF50; color: white; padding: 12px 24px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">
-            Start Your Free Trial
-        </button>
+    <div class="instructions" style="margin-top: 40px;">
+        <strong>🔧 Debugging Tips:</strong> 
+        <br>• Open browser developer tools (F12) to see console logs during analysis
+        <br>• Check for any error messages or highlighting status updates
+        <br>• Try refreshing the page if highlighting doesn't work initially
+        <br>• Test on different websites like Wikipedia or news articles
     </div>
 </body>
 </html>

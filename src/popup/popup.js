@@ -13,7 +13,6 @@ analyzeBtn.addEventListener('click', async () => {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    console.log('Active tab:', tab?.url);
     
     if (!tab || !tab.id) {
       throw new Error('No active tab found');
@@ -36,11 +35,8 @@ analyzeBtn.addEventListener('click', async () => {
       
       pageText = results?.[0]?.result || '';
     } catch (scriptError) {
-      console.error('Script execution failed:', scriptError);
       throw new Error('Failed to access page content. Please refresh the page and try again.');
     }
-    
-    console.log('Extracted text length:', pageText.length);
     
     if (!pageText || pageText.trim().length < 50) {
       throw new Error('Not enough text content found on this page to analyze.');
@@ -49,8 +45,7 @@ analyzeBtn.addEventListener('click', async () => {
     showStatus('Analyzing emotions with AI...', 'info');
     
     // Analyze emotions
-    const emotions = await analyzeEmotions(pageText);
-    console.log('Emotions found:', emotions.length);
+    const { emotions, analysis } = await analyzeEmotions(pageText);
     
     if (emotions && emotions.length > 0) {
       showStatus('Applying highlights to page...', 'info');
@@ -64,15 +59,34 @@ analyzeBtn.addEventListener('click', async () => {
         });
         
         const highlightCount = highlightResults?.[0]?.result || 0;
-        console.log('Highlight count:', highlightCount);
         
         if (highlightCount > 0) {
-          showStatus(`✨ Analysis complete! Highlighted ${highlightCount} emotion sections.`, 'success');
+          showStatus(`Analysis complete! Highlighted ${highlightCount} emotion sections.`, 'success');
+          // Show clear button after successful highlighting
+          const clearBtn = document.getElementById('clearBtn');
+          if (clearBtn) {
+            clearBtn.style.display = 'block';
+          }
+          // Update example analysis panel with AI summary if present
+          if (analysis) {
+            const insight = document.querySelector('.preview-insight');
+            if (insight) insight.textContent = analysis;
+            // Hide example label and sample bar once real analysis is available
+            const previewLabel = document.querySelector('.preview-label');
+            if (previewLabel) {
+              previewLabel.style.display = 'none';
+              previewLabel.setAttribute('aria-hidden', 'true');
+            }
+            const previewBar = document.querySelector('.emotion-bar');
+            if (previewBar) {
+              previewBar.style.display = 'none';
+              previewBar.setAttribute('aria-hidden', 'true');
+            }
+          }
         } else {
           showStatus('Analysis complete but no text could be highlighted. Try a different page.', 'warning');
         }
       } catch (highlightError) {
-        console.error('Highlighting failed:', highlightError);
         showStatus('Analysis complete but highlighting failed. The page may have restrictions.', 'warning');
       }
     } else {
@@ -80,90 +94,112 @@ analyzeBtn.addEventListener('click', async () => {
     }
     
   } catch (error) {
-    console.error('Analysis error:', error);
     showStatus('Error: ' + error.message, 'error');
   }
   
   analyzeBtn.classList.remove('loading');
 });
 
-// Extract text from page - simplified and more reliable
+// Simple text extraction with ID mapping
 function extractPageText() {
-  console.log('Starting text extraction...');
-  
-  // Remove any existing highlights first
-  const existingHighlights = document.querySelectorAll('.emotion-highlight');
-  existingHighlights.forEach(highlight => {
-    const parent = highlight.parentNode;
-    if (parent) {
-      parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
-      parent.normalize();
-    }
+  // Clear any existing highlights
+  document.querySelectorAll('.emotion-highlight').forEach(el => {
+    el.classList.remove('emotion-highlight');
+    el.style.removeProperty('background-color');
+    el.style.removeProperty('border-left');
+    el.style.removeProperty('padding');
+    el.style.removeProperty('border-radius');
   });
   
-  // Get text from meaningful elements
-  const selectors = [
-    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
-    'div', 'span', 'a', 'li', 'td', 'th', 
-    'blockquote', 'article', 'section'
-  ];
-  
-  const elements = document.querySelectorAll(selectors.join(', '));
+  // Get ALL text elements on the page - comprehensive coverage
+  const allTextElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div, span, li, td, th, blockquote, article, section, aside, main, header, footer, figcaption, caption, label, legend, summary, details');
   const textBlocks = [];
-  const seenTexts = new Set();
+  let elementIndex = 0;
   
-  elements.forEach(el => {
+  allTextElements.forEach((element, index) => {
     // Skip hidden elements
-    if (el.offsetParent === null) return;
-    
-    // Skip script, style, nav elements
-    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'].includes(el.tagName)) return;
-    
-    // Skip if parent is also in our selector list (avoid duplicates)
-    if (el.parentElement && selectors.some(sel => el.parentElement.matches && el.parentElement.matches(sel))) {
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
       return;
     }
     
-    const text = el.textContent?.trim();
-    if (text && text.length > 20 && text.length < 300) {
-      const textKey = text.toLowerCase().substring(0, 50);
-      if (!seenTexts.has(textKey)) {
-        seenTexts.add(textKey);
-        textBlocks.push(text);
+    // Skip certain elements that shouldn't be analyzed
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'META', 'LINK'].includes(element.tagName)) {
+      return;
+    }
+    
+    // Get text content
+    let text = element.textContent?.trim() || '';
+    
+    // For container elements, be more selective about what to skip
+    if (['DIV', 'SPAN', 'SECTION', 'ARTICLE', 'ASIDE', 'MAIN', 'HEADER', 'FOOTER'].includes(element.tagName)) {
+      // Only skip containers that have multiple paragraphs/headings (likely just wrappers)
+      const blockChildren = element.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+      if (blockChildren.length > 1) {
+        // This is likely a wrapper, skip it to avoid duplicate text
+        return;
       }
+      
+      // If it has one child element, check if the text is mostly the same
+      if (blockChildren.length === 1) {
+        const childText = blockChildren[0].textContent?.trim() || '';
+        // If container text is mostly just the child text, skip the container
+        if (text.length > 0 && childText.length > 0 && text.includes(childText) && (childText.length / text.length) > 0.8) {
+          return;
+        }
+      }
+    }
+    
+    // More lenient text filtering - capture more content
+    if (text && text.length >= 10 && text.length <= 2000) {
+      // Assign unique ID if it doesn't have one
+      if (!element.id) {
+        element.id = `emotion-${element.tagName.toLowerCase()}-${elementIndex}`;
+      }
+      
+      // Store text with its element ID and tag info
+      textBlocks.push(`[ID:${element.id}] ${text}`);
+      elementIndex++;
     }
   });
   
-  const result = textBlocks.join('\n').substring(0, 20000);
-  console.log('Extracted text blocks:', textBlocks.length, 'Total length:', result.length);
+  const result = textBlocks.join('\n\n');
   return result;
 }
 
+
 // Analyze emotions with Gemini API
-async function analyzeEmotions(content) {
+async function analyzeEmotionsWithGemini(content) {
   const API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
   
-  const prompt = `Analyze this webpage content and identify text snippets with clear emotions.
+  const prompt = `Analyze this webpage content and identify text elements with clear emotions.
 
-Extract 8-15 text snippets that express emotions. For each snippet:
-1. Use EXACT text from the content (20-150 words)
-2. Identify the primary emotion
+Each text element has an ID marker at the start like [ID:emotion-p-0], [ID:emotion-h1-0], [ID:emotion-div-0], etc.
+
+IMPORTANT: Copy the EXACT ID from the [ID:xxx] marker without modifying it.
+
+For each emotional text element:
+1) Find the [ID:emotion-xxx-n] marker at the beginning
+2) Copy the EXACT ID (e.g., "emotion-p-0", "emotion-h1-1")
+3) Identify the primary emotion
 
 Available emotions: happy, sad, angry, excited, worried, surprised, trusting, calm, love, frustrated
 
-Return ONLY a valid JSON array:
-[
-  {"text": "exact text from webpage", "emotion": "happy"},
-  {"text": "another exact text snippet", "emotion": "worried"}
-]
+Return ONLY a valid JSON object with two fields:
+{
+  "emotions": [
+    {"id": "emotion-p-0", "emotion": "happy"},
+    {"id": "emotion-h1-1", "emotion": "excited"},
+    {"id": "emotion-div-2", "emotion": "worried"}
+  ],
+  "analysis": "One or two concise sentences summarizing the overall tone and suggested action."
+}
 
 Rules:
-- Use EXACT text from content, don't modify it
-- Skip navigation, headers, technical content
-- Focus on meaningful content with clear emotions
-- Each snippet should be 20+ words
-- Return 8-15 results maximum
+- The id must match pattern emotion-TAGNAME-NUMBER (e.g., emotion-p-5)
+- Return 5-20 emotion items maximum
+- Keep analysis under 250 characters, objective and professional
 
 Content:
 ${content}`;
@@ -194,213 +230,189 @@ ${content}`;
     }
     
     const responseText = data.candidates[0].content.parts[0].text;
-    console.log('API response:', responseText.substring(0, 200));
     
-    // Extract JSON
-    const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
-    if (!jsonMatch) {
+    // Parse JSON (object with emotions and analysis). Try direct parse first
+    let parsed;
+    try {
+      parsed = JSON.parse(responseText.trim());
+    } catch (_) {
+      const objectMatch = responseText.match(/\{[\s\S]*\}/);
+      if (objectMatch) {
+        parsed = JSON.parse(objectMatch[0]);
+      }
+    }
+    if (!parsed) {
       throw new Error('No JSON found in response');
     }
+    const emotionsRaw = Array.isArray(parsed) ? parsed : parsed.emotions;
+    const summaryText = Array.isArray(parsed) ? '' : (parsed.analysis || '');
     
-    const emotions = JSON.parse(jsonMatch[0]);
-    
-    // Validate emotions
+    // Validate emotions and IDs
     const validEmotions = ['happy', 'sad', 'angry', 'excited', 'worried', 'surprised', 'trusting', 'calm', 'love', 'frustrated'];
     
-    const cleanedEmotions = emotions
-      .filter(item => item.text && item.emotion && typeof item.text === 'string')
+    const cleanedEmotions = (emotionsRaw || [])
+      .filter(item => {
+        // Check if item has required fields
+        if (!item.id || !item.emotion || typeof item.id !== 'string') {
+          return false;
+        }
+        
+        // Check if ID follows proper format (emotion-tagname-number)
+        const validIdPattern = /^emotion-[a-z]+\d*-\d+$/;
+        if (!validIdPattern.test(item.id.trim())) {
+          return false;
+        }
+        
+        return true;
+      })
       .map(item => ({
-        text: item.text.trim(),
+        id: item.id.trim(),
         emotion: validEmotions.includes(item.emotion.toLowerCase()) 
                  ? item.emotion.toLowerCase() 
                  : 'calm'
       }))
-      .filter(item => item.text.length >= 20 && item.text.length <= 300)
-      .slice(0, 12);
+      .slice(0, 20);
     
-    console.log(`Processed ${cleanedEmotions.length} valid emotions`);
-    return cleanedEmotions;
+    return { emotions: cleanedEmotions, analysis: (summaryText || '').toString().trim().slice(0, 300) };
     
   } catch (error) {
-    console.error('API call failed:', error);
-    throw new Error(`Analysis failed: ${error.message}`);
+    throw new Error(`Gemini analysis failed: ${error.message}`);
   }
 }
 
-// Apply highlights to page - completely rewritten for reliability
+// Emotion analysis using real Gemini API
+async function analyzeEmotions(content) {
+  const result = await analyzeEmotionsWithGemini(content);
+  return result;
+}
+
+// Super simple highlighting - just map IDs to colors
 function applyHighlights(emotions) {
-  console.log('Applying highlights for', emotions.length, 'emotions');
-  
   if (!emotions || emotions.length === 0) {
     return 0;
   }
   
-  // Emotion colors
-  const emotionColors = {
-    happy: '#FFF9C4',
-    excited: '#FFF9C4', 
-    sad: '#DBEAFE',
-    angry: '#FEE2E2',
-    frustrated: '#FEE2E2',
-    love: '#FCE7F3',
-    worried: '#EDE9FE',
-    calm: '#F3F4F6',
-    surprised: '#FED7AA',
-    trusting: '#D1FAE5'
+  // Transparent emotion colors for subtle highlighting
+  const colors = {
+    happy: 'rgba(255, 249, 196, 0.3)',      // Light yellow with transparency
+    excited: 'rgba(251, 191, 36, 0.2)',     // Amber with transparency
+    sad: 'rgba(219, 234, 254, 0.4)',        // Light blue with transparency
+    angry: 'rgba(254, 226, 226, 0.4)',      // Light red with transparency
+    frustrated: 'rgba(239, 68, 68, 0.15)',  // Red with low transparency
+    love: 'rgba(252, 231, 243, 0.4)',       // Light pink with transparency
+    worried: 'rgba(237, 233, 254, 0.4)',    // Light purple with transparency
+    calm: 'rgba(203, 213, 225, 0.55)',      // Darker slate gray with more visibility
+    surprised: 'rgba(254, 215, 170, 0.3)',  // Light orange with transparency
+    trusting: 'rgba(209, 250, 229, 0.4)'    // Light green with transparency
   };
   
   let highlightCount = 0;
-  const processedTexts = new Set();
   
-  // Process each emotion
-  emotions.forEach(({ text: emotionText, emotion }) => {
-    if (highlightCount >= 10) return; // Limit highlights
-    
-    const textKey = emotionText.toLowerCase().trim();
-    if (processedTexts.has(textKey)) return;
-    processedTexts.add(textKey);
-    
-    const color = emotionColors[emotion] || emotionColors.calm;
-    
-    // Find and highlight text
-    if (highlightTextSimple(emotionText, color, emotion)) {
+  // Process each emotion - just find by ID and color it
+  emotions.forEach(({ id, emotion }) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const color = colors[emotion] || colors.calm;
+      
+      // Apply subtle highlighting that preserves layout
+      element.classList.add('emotion-highlight');
+      element.style.setProperty('background-color', color, 'important');
+      element.style.setProperty('border-left', `3px solid ${color.replace('0.', '0.8').replace(/rgba\(([^,]+,[^,]+,[^,]+),\s*[\d.]+\)/, 'rgba($1, 0.8)')}`, 'important');
+      
+      // Preserve original layout - minimal changes
+      const originalPadding = window.getComputedStyle(element).padding;
+      const originalMargin = window.getComputedStyle(element).margin;
+      
+      // Only add subtle padding if element doesn't already have enough
+      if (originalPadding === '0px' || originalPadding === '') {
+        element.style.setProperty('padding', '8px 12px', 'important');
+      } else {
+        element.style.setProperty('padding-left', 'calc(' + window.getComputedStyle(element).paddingLeft + ' + 8px)', 'important');
+      }
+      
+      element.style.setProperty('border-radius', '4px', 'important');
+      element.style.setProperty('transition', 'all 0.2s ease', 'important');
+      element.style.setProperty('box-sizing', 'border-box', 'important');
+      
+      // Preserve text properties - don't override existing styles
+      element.style.setProperty('line-height', 'inherit', 'important');
+      element.style.setProperty('font-size', 'inherit', 'important');
+      element.style.setProperty('font-family', 'inherit', 'important');
+      element.style.setProperty('font-weight', 'inherit', 'important');
+      
+      // Add subtle hover effect
+      element.addEventListener('mouseenter', function() {
+        this.style.setProperty('background-color', color.replace(/0\.\d+/, '0.5'), 'important');
+      });
+      
+      element.addEventListener('mouseleave', function() {
+        this.style.setProperty('background-color', color, 'important');
+      });
+      
+      // Remove default title and add custom hover tooltip
+      element.removeAttribute('title');
+      
+      // Add instant hover tooltip with larger font
+      element.addEventListener('mouseenter', function(e) {
+        // Remove any existing tooltip
+        const existingTooltip = document.querySelector('.emotion-tooltip-custom');
+        if (existingTooltip) existingTooltip.remove();
+        
+        const tooltip = document.createElement('div');
+        tooltip.className = 'emotion-tooltip-custom';
+        tooltip.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+        
+        tooltip.style.cssText = `
+          position: fixed !important;
+          background: rgba(0, 0, 0, 0.9) !important;
+          color: white !important;
+          padding: 8px 12px !important;
+          border-radius: 6px !important;
+          font-size: 16px !important;
+          font-weight: 600 !important;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          white-space: nowrap !important;
+          z-index: 999999 !important;
+          pointer-events: none !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+          transition: opacity 0.1s ease !important;
+        `;
+        
+        // Position tooltip near mouse
+        const rect = this.getBoundingClientRect();
+        tooltip.style.left = (rect.left + rect.width / 2 - 50) + 'px';
+        tooltip.style.top = (rect.top - 40) + 'px';
+        
+        document.body.appendChild(tooltip);
+      });
+      
+      element.addEventListener('mouseleave', function() {
+        const tooltip = document.querySelector('.emotion-tooltip-custom');
+        if (tooltip) tooltip.remove();
+      });
+      
       highlightCount++;
-      console.log(`✓ Highlighted: "${emotionText.substring(0, 30)}..." as ${emotion}`);
     }
   });
   
-  console.log('Total highlights applied:', highlightCount);
-  
-  // Show notification
+  // Simple notification
   if (highlightCount > 0) {
-    showNotification(`✨ Highlighted ${highlightCount} emotion sections!`, 'success');
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed; top: 20px; right: 20px; background: #10B981; color: white;
+      padding: 12px 20px; border-radius: 8px; z-index: 999999; font-family: Arial;
+      font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    notification.textContent = `✨ Highlighted ${highlightCount} emotions!`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.remove(), 3000);
   }
   
   return highlightCount;
 }
 
-// Simple, reliable text highlighting
-function highlightTextSimple(searchText, backgroundColor, emotion) {
-  const searchWords = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  
-  // Get all text nodes
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function(node) {
-        if (!node.nodeValue || node.nodeValue.trim().length < 10) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-        
-        // Skip certain elements
-        const skipTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'];
-        if (skipTags.includes(parent.tagName)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        // Skip already highlighted
-        if (parent.classList && parent.classList.contains('emotion-highlight')) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-  
-  const textNodes = [];
-  let node;
-  while (node = walker.nextNode()) {
-    textNodes.push(node);
-  }
-  
-  // Find best match
-  let bestMatch = null;
-  let bestScore = 0;
-  
-  textNodes.forEach(textNode => {
-    const nodeText = textNode.nodeValue.toLowerCase();
-    
-    // Try exact substring match first
-    if (nodeText.includes(searchText.toLowerCase().substring(0, 50))) {
-      bestMatch = textNode;
-      bestScore = 100;
-      return;
-    }
-    
-    // Try word matching
-    const matchingWords = searchWords.filter(word => nodeText.includes(word));
-    const score = matchingWords.length;
-    
-    if (score >= Math.min(3, searchWords.length * 0.6) && score > bestScore) {
-      bestMatch = textNode;
-      bestScore = score;
-    }
-  });
-  
-  // Highlight the best match
-  if (bestMatch) {
-    try {
-      const parent = bestMatch.parentElement;
-      if (!parent) return false;
-      
-      // Create highlight wrapper
-      const wrapper = document.createElement('span');
-      wrapper.className = 'emotion-highlight';
-      wrapper.style.cssText = `
-        background-color: ${backgroundColor} !important;
-        padding: 2px 4px !important;
-        border-radius: 3px !important;
-        border-left: 3px solid ${backgroundColor.replace('C4', '00')} !important;
-        display: inline !important;
-        position: relative !important;
-        cursor: help !important;
-      `;
-      
-      // Add hover tooltip
-      wrapper.addEventListener('mouseenter', function() {
-        const tooltip = document.createElement('div');
-        tooltip.className = 'emotion-tooltip';
-        tooltip.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-        tooltip.style.cssText = `
-          position: absolute;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          white-space: nowrap;
-          z-index: 10000;
-          top: -30px;
-          left: 50%;
-          transform: translateX(-50%);
-          pointer-events: none;
-        `;
-        this.appendChild(tooltip);
-      });
-      
-      wrapper.addEventListener('mouseleave', function() {
-        const tooltip = this.querySelector('.emotion-tooltip');
-        if (tooltip) tooltip.remove();
-      });
-      
-      // Wrap the text node
-      parent.insertBefore(wrapper, bestMatch);
-      wrapper.appendChild(bestMatch);
-      
-      return true;
-    } catch (error) {
-      console.error('Error highlighting:', error);
-      return false;
-    }
-  }
-  
-  return false;
-}
+
 
 // Show notification
 function showNotification(message, type = 'info') {
@@ -454,34 +466,11 @@ function showStatus(message, type) {
   }, delay);
 }
 
-// Add clear highlights button
+// Handle clear highlights button
 document.addEventListener('DOMContentLoaded', () => {
-  if (!document.getElementById('clearBtn')) {
-    const clearBtn = document.createElement('button');
-    clearBtn.id = 'clearBtn';
-    clearBtn.innerHTML = '🧹 Clear Highlights';
-    clearBtn.style.cssText = `
-      width: 100%;
-      padding: 12px;
-      background: #6B7280;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      margin-top: 12px;
-      transition: background 0.2s;
-    `;
-    
-    clearBtn.addEventListener('mouseenter', () => {
-      clearBtn.style.background = '#4B5563';
-    });
-    
-    clearBtn.addEventListener('mouseleave', () => {
-      clearBtn.style.background = '#6B7280';
-    });
-    
+  const clearBtn = document.getElementById('clearBtn');
+  
+  if (clearBtn) {
     clearBtn.addEventListener('click', async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -491,25 +480,90 @@ document.addEventListener('DOMContentLoaded', () => {
             function: () => {
               const highlights = document.querySelectorAll('.emotion-highlight');
               highlights.forEach(highlight => {
-                const parent = highlight.parentNode;
-                if (parent) {
-                  parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
-                  parent.normalize();
-                }
+                highlight.classList.remove('emotion-highlight');
+                highlight.style.removeProperty('background-color');
+                highlight.style.removeProperty('border-left');
+                highlight.style.removeProperty('padding');
+                highlight.style.removeProperty('border-radius');
+                highlight.style.removeProperty('padding-left');
+                highlight.style.removeProperty('transition');
+                highlight.style.removeProperty('box-sizing');
+                highlight.style.removeProperty('line-height');
+                highlight.style.removeProperty('font-size');
+                highlight.style.removeProperty('font-family');
+                highlight.style.removeProperty('font-weight');
+                highlight.removeAttribute('title');
               });
               
-              document.querySelectorAll('.emotion-tooltip, .emotion-notification').forEach(el => el.remove());
+              document.querySelectorAll('.emotion-tooltip-custom, .emotion-notification').forEach(el => el.remove());
               
               return highlights.length;
             }
           });
-          showStatus('Highlights cleared!', 'success');
+          showStatus('All highlights cleared successfully', 'success');
+          clearBtn.style.display = 'none';
         }
       } catch (error) {
         showStatus('Error clearing highlights', 'error');
       }
     });
-    
-    analyzeBtn.parentNode.insertBefore(clearBtn, analyzeBtn.nextSibling);
+  }
+});
+
+// Theme toggle (light/dark)
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('themeToggle');
+  if (!toggle) return;
+
+  // Load saved theme
+  const saved = localStorage.getItem('wmpf-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = saved || (prefersDark ? 'dark' : 'light');
+  document.body.classList.remove('light', 'dark');
+  document.body.classList.add(initial);
+  // Set CSS vars for theme
+  if (initial === 'dark') {
+    document.body.style.setProperty('--bg', '#0F172A');
+    document.body.style.setProperty('--fg', '#E2E8F0');
+    document.body.style.setProperty('--muted', '#94A3B8');
+    document.body.style.setProperty('--panel', '#1E293B');
+    document.body.style.setProperty('--panel-border', '#334155');
+  } else {
+    document.body.style.setProperty('--bg', '#FEFEFE');
+    document.body.style.setProperty('--fg', '#1E293B');
+    document.body.style.setProperty('--muted', '#64748B');
+    document.body.style.setProperty('--panel', '#F8FAFC');
+    document.body.style.setProperty('--panel-border', '#E2E8F0');
+  }
+  toggle.querySelector('.theme-icon').textContent = initial === 'dark' ? '🌙' : '☀️';
+
+  toggle.addEventListener('click', () => {
+    const isDark = document.body.classList.contains('dark');
+    const next = isDark ? 'light' : 'dark';
+    document.body.classList.remove('light', 'dark');
+    document.body.classList.add(next);
+    localStorage.setItem('wmpf-theme', next);
+    toggle.querySelector('.theme-icon').textContent = next === 'dark' ? '🌙' : '☀️';
+    // Update vars on toggle
+    if (next === 'dark') {
+      document.body.style.setProperty('--bg', '#0F172A');
+      document.body.style.setProperty('--fg', '#E2E8F0');
+      document.body.style.setProperty('--muted', '#94A3B8');
+      document.body.style.setProperty('--panel', '#1E293B');
+      document.body.style.setProperty('--panel-border', '#334155');
+    } else {
+      document.body.style.setProperty('--bg', '#FEFEFE');
+      document.body.style.setProperty('--fg', '#1E293B');
+      document.body.style.setProperty('--muted', '#64748B');
+      document.body.style.setProperty('--panel', '#F8FAFC');
+      document.body.style.setProperty('--panel-border', '#E2E8F0');
+    }
+  });
+
+  // Ensure subtitle wraps to avoid overlap
+  const subtitle = document.querySelector('.subtitle');
+  if (subtitle) {
+    subtitle.style.whiteSpace = 'normal';
+    subtitle.style.wordBreak = 'break-word';
   }
 });

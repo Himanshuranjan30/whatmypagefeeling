@@ -5,92 +5,123 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>What My Page Feeling</title>
   <link rel="stylesheet" href="../styles/popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
-    <div class="rating-badge">
-      <span>⭐ 5.0</span>
+    <!-- Trust Panel moved to sidebar position -->
+    <div class="trust-panel">
+      <div class="trust-rating">5.0</div>
+      <div class="trust-text">Used by 1,200+ marketers</div>
+      <!-- Theme toggle -->
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">
+        <span class="theme-icon" aria-hidden="true">🌙</span>
+      </button>
     </div>
 
     <div class="header">
-      <h1>👋 Welcome! Instantly Check Your Page's Emotional Tone 🚀</h1>
-      <p class="subtitle">(Perfect for marketers, writers & content creators)</p>
+      <h1>Instantly Check Your Page's Emotional Tone</h1>
+      <p class="subtitle">Perfect for marketers, writers and content creators</p>
     </div>
 
     <div class="main-content">
+      <!-- Clean data visualization instead of emoji-heavy example -->
       <div class="emotion-preview" id="emotionPreview">
-        <p class="preview-text">Example: This landing page is <span class="emotion-stat happy">60% Excited 🎉</span>, <span class="emotion-stat calm">30% Calm 😌</span>, <span class="emotion-stat angry">10% Frustrated 😠</span></p>
-        <p class="preview-insight">— great for customer trust but may need more urgency.</p>
+        <div class="preview-label">Example Analysis</div>
+        <div class="emotion-bar">
+          <div class="emotion-segment excited" style="width: 60%;" title="60% Excited"></div>
+          <div class="emotion-segment calm" style="width: 30%;" title="30% Calm"></div>
+          <div class="emotion-segment frustrated" style="width: 10%;" title="10% Frustrated"></div>
+        </div>
+        <p class="preview-insight">Great for customer trust but may need more urgency</p>
       </div>
 
-      <button class="analyze-btn" id="analyzeBtn">
-        <span class="btn-text">Check My Page's Tone in 2 Seconds ⚡</span>
-        <div class="loading-spinner" id="loadingSpinner"></div>
+      <!-- Primary CTA with subtle design improvements -->
+      <button class="analyze-btn" id="analyzeBtn" aria-label="Analyze page emotional tone">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" fill="currentColor"/>
+        </svg>
+        <span class="btn-text">Check My Page's Tone in 2 Seconds</span>
+        <div class="loading-spinner" id="loadingSpinner" aria-hidden="true"></div>
       </button>
 
-      <div class="testimonial marketer-testimonial">
-        <p class="quote">"This helped me tweak my landing page copy — conversion rate up 17% in a week!"</p>
-        <div class="author">
-          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23FF69B4'/%3E%3C/svg%3E" alt="Sarah">
-          <div>
-            <p class="name">Sarah K.</p>
-            <p class="role">Digital Marketer</p>
+      <!-- Minimal professional testimonial -->
+      <div class="testimonial-minimal">
+        <p class="quote">This helped me tweak my landing page copy — conversion rate up 17% in a week!</p>
+        <div class="author-minimal">
+          <div class="author-avatar"></div>
+          <div class="author-info">
+            <span class="name">Sarah K.</span>
+            <span class="role">Digital Marketer at TechFlow</span>
           </div>
         </div>
       </div>
 
-      <div class="features">
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>Analyze any page's tone in seconds</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>Unlimited checks — no credit card, no sign-ups</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>Perfect for ads, landing pages & blogs</span>
-        </div>
-      </div>
+      <div class="status-message" id="statusMessage" role="status" aria-live="polite"></div>
 
-      <div class="status-message" id="statusMessage"></div>
+      <!-- Collapsible features section -->
+      <details class="features-details">
+        <summary class="features-toggle">
+          <span>Features & Benefits</span>
+          <span class="toggle-icon">▼</span>
+        </summary>
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-icon"></div>
+            <span>Analyze any page's tone in seconds</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"></div>
+            <span>Unlimited checks — no sign-ups required</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon"></div>
+            <span>Perfect for ads, landing pages and blogs</span>
+          </div>
+        </div>
+      </details>
 
+      <!-- Simplified emotion guide -->
       <details class="emotion-guide-details">
-        <summary class="emotion-guide-toggle">
-          <span>🎨 Emotion Color Guide</span>
+        <summary class="emotion-guide-toggle" tabindex="0">
+          <span>Emotion Color Guide</span>
           <span class="toggle-icon">▼</span>
         </summary>
         <div class="emotion-legend" id="emotionLegend">
-          <p class="guide-benefit">Each color helps you quickly spot emotional strengths & weaknesses in content.</p>
+          <p class="guide-benefit">Each color helps you quickly identify emotional patterns in content</p>
           <div class="legend-items">
             <div class="legend-item">
-              <span class="emotion-badge happy">😊 Happy</span>
+              <span class="emotion-badge happy">Happy</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge sad">😢 Sad</span>
+              <span class="emotion-badge sad">Sad</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge angry">😠 Angry</span>
+              <span class="emotion-badge angry">Angry</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge love">😍 In Love</span>
+              <span class="emotion-badge love">Loving</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge fear">😨 Worried</span>
+              <span class="emotion-badge worried">Worried</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge neutral">😌 Calm</span>
+              <span class="emotion-badge calm">Calm</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge surprise">😮 Surprised</span>
+              <span class="emotion-badge surprised">Surprised</span>
             </div>
             <div class="legend-item">
-              <span class="emotion-badge trust">🤗 Trusting</span>
+              <span class="emotion-badge trusting">Trusting</span>
             </div>
           </div>
         </div>
       </details>
+
+      <!-- Clear highlights as secondary action -->
+      <button class="clear-btn" id="clearBtn" aria-label="Clear all highlights" style="display: none;">
+        Clear Highlights
+      </button>
     </div>
   </div>
 
