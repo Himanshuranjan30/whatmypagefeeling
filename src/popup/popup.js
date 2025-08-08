@@ -14,14 +14,32 @@ analyzeBtn.addEventListener('click', async () => {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    console.log('Tab:', tab);
     
-    // Just get the fucking text directly from the page
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: extractPageTextDirect
-    });
+    if (!tab || !tab.id) {
+      throw new Error('No active tab found');
+    }
     
-    const pageText = results && results[0] && results[0].result ? results[0].result : '';
+    // Get page text with better error handling
+    console.log('Executing script on tab:', tab.id);
+    let results;
+    try {
+      results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: extractPageTextDirect
+      });
+      console.log('Script results:', results);
+    } catch (scriptError) {
+      console.error('Script execution failed:', scriptError);
+      throw new Error('Failed to access page content. Make sure you\'re on a regular website.');
+    }
+    
+    if (!results || !results[0]) {
+      throw new Error('No results from script execution');
+    }
+    
+    const pageText = results[0].result || '';
+    console.log('Page text length:', pageText.length);
     
     if (!pageText || pageText.trim().length === 0) {
       showStatus('No text found on page', 'error');
@@ -29,12 +47,14 @@ analyzeBtn.addEventListener('click', async () => {
       return;
     }
     
-    console.log('Got page text, length:', pageText.length);
+    console.log('Calling Gemini API...');
     
     // Call Gemini API directly
     const emotions = await callGeminiAPI(pageText);
+    console.log('API returned emotions:', emotions.length);
     
     if (emotions && emotions.length > 0) {
+      console.log('Applying highlights...');
       // Apply highlights directly
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -53,7 +73,7 @@ analyzeBtn.addEventListener('click', async () => {
     }
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Full error:', error);
     showStatus('Error: ' + error.message, 'error');
   }
   
@@ -91,18 +111,35 @@ async function callGeminiAPI(content) {
   });
   
   const data = await response.json();
+  console.log('API response:', data);
   
   if (data.error) {
     throw new Error(data.error.message);
   }
   
-  const text = data.candidates[0].parts[0].text;
+  // Check if response structure exists
+  if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+    console.error('Unexpected API response structure:', data);
+    return [];
+  }
+  
+  const text = data.candidates[0].content.parts[0].text;
+  console.log('API response text:', text);
+  
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   
   if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]).slice(0, 50);
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('Parsed emotions:', parsed);
+      return parsed.slice(0, 50);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return [];
+    }
   }
   
+  console.warn('No JSON array found in response');
   return [];
 }
 
