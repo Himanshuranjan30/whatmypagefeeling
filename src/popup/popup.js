@@ -6,11 +6,17 @@ const statusMessage = document.getElementById('statusMessage');
 const emotionLegend = document.getElementById('emotionLegend');
 const apiKeySection = document.getElementById('apiKeySection');
 
+// Hide emotion preview initially
+const emotionPreview = document.getElementById('emotionPreview');
+
 // Load saved API key on popup open
 chrome.storage.local.get(['geminiApiKey'], (result) => {
   if (result.geminiApiKey) {
     apiKeyInput.value = result.geminiApiKey;
     apiKeySection.style.display = 'none';
+    emotionPreview.style.display = 'block';
+  } else {
+    emotionPreview.style.display = 'none';
   }
 });
 
@@ -28,6 +34,7 @@ saveApiKeyBtn.addEventListener('click', () => {
     apiKeySection.style.opacity = '0';
     setTimeout(() => {
       apiKeySection.style.display = 'none';
+      emotionPreview.style.display = 'block';
     }, 300);
   });
 });
@@ -45,7 +52,6 @@ analyzeBtn.addEventListener('click', async () => {
     // Show loading state
     analyzeBtn.classList.add('loading');
     statusMessage.classList.remove('show');
-    emotionLegend.classList.add('show');
 
     try {
       // Get the active tab

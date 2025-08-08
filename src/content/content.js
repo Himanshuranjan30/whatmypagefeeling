@@ -54,11 +54,15 @@ function applyEmotionColors(emotions) {
     sad: '#B3D4F5',        // Light blue
     angry: '#FFB3B3',      // Light red
     love: '#FFD6EC',       // Light pink
-    fear: '#D4B3E6',       // Light purple
-    neutral: '#E0E5E6',    // Light gray
+    fear: '#D4B3E6',       // Light purple (Worried)
+    worried: '#D4B3E6',    // Light purple
+    neutral: '#E0E5E6',    // Light gray (Calm)
+    calm: '#E0E5E6',       // Light gray
     surprise: '#FFD4A3',   // Light orange
+    surprised: '#FFD4A3',  // Light orange
     disgust: '#D4B3A3',    // Light brown
     trust: '#B3E6B3',      // Light green
+    trusting: '#B3E6B3',   // Light green
     anticipation: '#FFB3D4' // Light rose
   };
 

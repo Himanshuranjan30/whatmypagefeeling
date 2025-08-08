@@ -57,15 +57,18 @@
   background: #FFD6EC !important;
 }
 
-.emotion-highlight[data-emotion="fear"] {
+.emotion-highlight[data-emotion="fear"],
+.emotion-highlight[data-emotion="worried"] {
   background: #D4B3E6 !important;
 }
 
-.emotion-highlight[data-emotion="neutral"] {
+.emotion-highlight[data-emotion="neutral"],
+.emotion-highlight[data-emotion="calm"] {
   background: #E0E5E6 !important;
 }
 
-.emotion-highlight[data-emotion="surprise"] {
+.emotion-highlight[data-emotion="surprise"],
+.emotion-highlight[data-emotion="surprised"] {
   background: #FFD4A3 !important;
 }
 
@@ -73,7 +76,8 @@
   background: #D4B3A3 !important;
 }
 
-.emotion-highlight[data-emotion="trust"] {
+.emotion-highlight[data-emotion="trust"],
+.emotion-highlight[data-emotion="trusting"] {
   background: #B3E6B3 !important;
 }
 

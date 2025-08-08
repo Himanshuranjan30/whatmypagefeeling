@@ -26,18 +26,18 @@ async function analyzeTextWithGemini(content, apiKey) {
 
 For EVERY sentence or meaningful phrase in the text, provide:
 1. The exact text (can be 1-100 words)
-2. The dominant emotion (choose from: happy, sad, angry, love, fear, surprise, disgust, trust, anticipation, or neutral)
+2. The dominant emotion (choose from: happy, sad, angry, love, worried, surprised, disgust, trusting, anticipation, or calm)
 
 Format your response as a JSON array covering ALL text:
 [
   {"text": "First sentence or phrase", "emotion": "happy"},
-  {"text": "Second sentence or phrase", "emotion": "neutral"},
+  {"text": "Second sentence or phrase", "emotion": "calm"},
   {"text": "Third sentence or phrase", "emotion": "sad"}
 ]
 
 IMPORTANT RULES:
 - Cover EVERY sentence/phrase in the text, don't skip any
-- Assign "neutral" if no clear emotion is present
+- Assign "calm" if no clear emotion is present
 - Break long paragraphs into multiple entries
 - Include ALL text, even navigation items, headers, etc.
 - Return 50-200+ entries to cover the entire page
