@@ -1,7 +1,6 @@
 // DOM elements
 const analyzeBtn = document.getElementById('analyzeBtn');
 const statusMessage = document.getElementById('statusMessage');
-const emotionLegend = document.getElementById('emotionLegend');
 
 // Show emotion preview on load
 const emotionPreview = document.getElementById('emotionPreview');
@@ -27,23 +26,12 @@ analyzeBtn.addEventListener('click', async () => {
     
     showStatus('Extracting page content...', 'info');
     
-    // First inject the content script
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['src/content/content.js']
-      });
-      console.log('Content script injected successfully');
-    } catch (injectionError) {
-      console.log('Content script already exists or injection failed:', injectionError);
-    }
-    
-    // Extract page text
+    // Extract page text directly
     let pageText;
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: extractPageTextDirect
+        function: extractPageText
       });
       
       pageText = results?.[0]?.result || '';
@@ -60,18 +48,18 @@ analyzeBtn.addEventListener('click', async () => {
     
     showStatus('Analyzing emotions with AI...', 'info');
     
-    // Analyze emotions with improved API call
-    const emotions = await analyzeEmotionsImproved(pageText);
+    // Analyze emotions
+    const emotions = await analyzeEmotions(pageText);
     console.log('Emotions found:', emotions.length);
     
     if (emotions && emotions.length > 0) {
       showStatus('Applying highlights to page...', 'info');
       
-      // Apply highlights using the content script
+      // Apply highlights
       try {
         const highlightResults = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          function: applyHighlightsDirect,
+          function: applyHighlights,
           args: [emotions]
         });
         
@@ -99,75 +87,86 @@ analyzeBtn.addEventListener('click', async () => {
   analyzeBtn.classList.remove('loading');
 });
 
-// Direct text extraction function - improved
-function extractPageTextDirect() {
-  try {
-    if (!document.body) return '';
+// Extract text from page - simplified and more reliable
+function extractPageText() {
+  console.log('Starting text extraction...');
+  
+  // Remove any existing highlights first
+  const existingHighlights = document.querySelectorAll('.emotion-highlight');
+  existingHighlights.forEach(highlight => {
+    const parent = highlight.parentNode;
+    if (parent) {
+      parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+      parent.normalize();
+    }
+  });
+  
+  // Get text from meaningful elements
+  const selectors = [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+    'div', 'span', 'a', 'li', 'td', 'th', 
+    'blockquote', 'article', 'section'
+  ];
+  
+  const elements = document.querySelectorAll(selectors.join(', '));
+  const textBlocks = [];
+  const seenTexts = new Set();
+  
+  elements.forEach(el => {
+    // Skip hidden elements
+    if (el.offsetParent === null) return;
     
-    // Get meaningful text elements
-    const selectors = [
-      'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
-      'span:not(.emotion-highlight)', 'div', 'a', 'li', 'td', 'th', 
-      'blockquote', 'article', 'section'
-    ];
+    // Skip script, style, nav elements
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'].includes(el.tagName)) return;
     
-    const elements = document.querySelectorAll(selectors.join(', '));
-    const textBlocks = [];
-    const seenTexts = new Set();
+    // Skip if parent is also in our selector list (avoid duplicates)
+    if (el.parentElement && selectors.some(sel => el.parentElement.matches && el.parentElement.matches(sel))) {
+      return;
+    }
     
-    elements.forEach(el => {
-      // Skip hidden, script elements, or already highlighted
-      if (el.offsetParent === null) return;
-      if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'].includes(el.tagName)) return;
-      if (el.classList.contains('emotion-highlight')) return;
-      
-      const text = el.textContent?.trim();
-      if (text && text.length > 15 && text.length < 500) {
-        const textKey = text.toLowerCase().substring(0, 50);
-        if (!seenTexts.has(textKey)) {
-          seenTexts.add(textKey);
-          textBlocks.push(text);
-        }
+    const text = el.textContent?.trim();
+    if (text && text.length > 20 && text.length < 300) {
+      const textKey = text.toLowerCase().substring(0, 50);
+      if (!seenTexts.has(textKey)) {
+        seenTexts.add(textKey);
+        textBlocks.push(text);
       }
-    });
-    
-    const result = textBlocks.join(' ').substring(0, 25000); // Limit for API
-    console.log('Extracted text blocks:', textBlocks.length, 'Total length:', result.length);
-    return result;
-  } catch (error) {
-    console.error('Text extraction error:', error);
-    return '';
-  }
+    }
+  });
+  
+  const result = textBlocks.join('\n').substring(0, 20000);
+  console.log('Extracted text blocks:', textBlocks.length, 'Total length:', result.length);
+  return result;
 }
 
-// Improved emotion analysis with better prompting
-async function analyzeEmotionsImproved(content) {
+// Analyze emotions with Gemini API
+async function analyzeEmotions(content) {
   const API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
   
-  const prompt = `Analyze the emotional tone of this webpage content. Extract 10-20 meaningful text snippets that have clear emotional content.
+  const prompt = `Analyze this webpage content and identify text snippets with clear emotions.
 
-For each snippet, provide:
-1. The EXACT text from the content (15-100 words)
-2. The primary emotion expressed
+Extract 8-15 text snippets that express emotions. For each snippet:
+1. Use EXACT text from the content (20-150 words)
+2. Identify the primary emotion
 
-Use these emotions only: happy, sad, angry, excited, worried, surprised, trusting, calm, love, frustrated
+Available emotions: happy, sad, angry, excited, worried, surprised, trusting, calm, love, frustrated
 
-Return ONLY a valid JSON array in this format:
+Return ONLY a valid JSON array:
 [
-  {"text": "exact text from content", "emotion": "happy"},
+  {"text": "exact text from webpage", "emotion": "happy"},
   {"text": "another exact text snippet", "emotion": "worried"}
 ]
 
 Rules:
-- Use EXACT text from the content, don't paraphrase
-- Skip navigation, headers, and technical text
-- Focus on content with clear emotional tone
-- Ensure text snippets are substantial (15+ words)
-- Return 10-20 results maximum
+- Use EXACT text from content, don't modify it
+- Skip navigation, headers, technical content
+- Focus on meaningful content with clear emotions
+- Each snippet should be 20+ words
+- Return 8-15 results maximum
 
-Content to analyze:
-${content.substring(0, 20000)}`;
+Content:
+${content}`;
 
   try {
     const response = await fetch(API_URL, {
@@ -179,58 +178,48 @@ ${content.substring(0, 20000)}`;
           temperature: 0.3,
           topK: 20,
           topP: 0.8,
-          maxOutputTokens: 3000,
+          maxOutputTokens: 2000,
         }
       })
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('API response received');
     
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid API response structure');
+      throw new Error('Invalid API response');
     }
     
     const responseText = data.candidates[0].content.parts[0].text;
-    console.log('API response text:', responseText.substring(0, 200) + '...');
+    console.log('API response:', responseText.substring(0, 200));
     
-    // Extract JSON from response
+    // Extract JSON
     const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
     if (!jsonMatch) {
-      console.error('No JSON found in response:', responseText);
-      throw new Error('Could not parse emotion data from AI response');
+      throw new Error('No JSON found in response');
     }
     
-    try {
-      const emotions = JSON.parse(jsonMatch[0]);
-      
-      // Validate and clean emotions
-      const validEmotions = ['happy', 'sad', 'angry', 'excited', 'worried', 'surprised', 'trusting', 'calm', 'love', 'frustrated'];
-      
-      const cleanedEmotions = emotions
-        .filter(item => item.text && item.emotion && typeof item.text === 'string')
-        .map(item => ({
-          text: item.text.trim(),
-          emotion: validEmotions.includes(item.emotion.toLowerCase()) 
-                   ? item.emotion.toLowerCase() 
-                   : 'calm'
-        }))
-        .filter(item => item.text.length >= 15 && item.text.length <= 300)
-        .slice(0, 20); // Limit results
-      
-      console.log(`Processed ${cleanedEmotions.length} valid emotions`);
-      return cleanedEmotions;
-      
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Attempted to parse:', jsonMatch[0]);
-      throw new Error('Failed to parse emotion analysis results');
-    }
+    const emotions = JSON.parse(jsonMatch[0]);
+    
+    // Validate emotions
+    const validEmotions = ['happy', 'sad', 'angry', 'excited', 'worried', 'surprised', 'trusting', 'calm', 'love', 'frustrated'];
+    
+    const cleanedEmotions = emotions
+      .filter(item => item.text && item.emotion && typeof item.text === 'string')
+      .map(item => ({
+        text: item.text.trim(),
+        emotion: validEmotions.includes(item.emotion.toLowerCase()) 
+                 ? item.emotion.toLowerCase() 
+                 : 'calm'
+      }))
+      .filter(item => item.text.length >= 20 && item.text.length <= 300)
+      .slice(0, 12);
+    
+    console.log(`Processed ${cleanedEmotions.length} valid emotions`);
+    return cleanedEmotions;
     
   } catch (error) {
     console.error('API call failed:', error);
@@ -238,37 +227,26 @@ ${content.substring(0, 20000)}`;
   }
 }
 
-// Improved highlighting function that actually works
-function applyHighlightsDirect(emotions) {
-  console.log('Starting to apply highlights for', emotions.length, 'emotions');
+// Apply highlights to page - completely rewritten for reliability
+function applyHighlights(emotions) {
+  console.log('Applying highlights for', emotions.length, 'emotions');
   
   if (!emotions || emotions.length === 0) {
-    console.log('No emotions to highlight');
     return 0;
   }
   
-  // Clear existing highlights first
-  const existingHighlights = document.querySelectorAll('.emotion-highlight');
-  existingHighlights.forEach(highlight => {
-    const parent = highlight.parentNode;
-    while (highlight.firstChild) {
-      parent.insertBefore(highlight.firstChild, highlight);
-    }
-    parent.removeChild(highlight);
-  });
-  
-  // Emotion color scheme
+  // Emotion colors
   const emotionColors = {
-    happy: { bg: '#FFF9C4', border: '#F59E0B' },
-    excited: { bg: '#FFF9C4', border: '#F59E0B' },
-    sad: { bg: '#DBEAFE', border: '#3B82F6' },
-    angry: { bg: '#FEE2E2', border: '#EF4444' },
-    frustrated: { bg: '#FEE2E2', border: '#EF4444' },
-    love: { bg: '#FCE7F3', border: '#EC4899' },
-    worried: { bg: '#EDE9FE', border: '#8B5CF6' },
-    calm: { bg: '#F3F4F6', border: '#6B7280' },
-    surprised: { bg: '#FED7AA', border: '#F97316' },
-    trusting: { bg: '#D1FAE5', border: '#10B981' }
+    happy: '#FFF9C4',
+    excited: '#FFF9C4', 
+    sad: '#DBEAFE',
+    angry: '#FEE2E2',
+    frustrated: '#FEE2E2',
+    love: '#FCE7F3',
+    worried: '#EDE9FE',
+    calm: '#F3F4F6',
+    surprised: '#FED7AA',
+    trusting: '#D1FAE5'
   };
   
   let highlightCount = 0;
@@ -276,36 +254,34 @@ function applyHighlightsDirect(emotions) {
   
   // Process each emotion
   emotions.forEach(({ text: emotionText, emotion }) => {
-    if (highlightCount >= 15) return; // Limit total highlights
+    if (highlightCount >= 10) return; // Limit highlights
     
     const textKey = emotionText.toLowerCase().trim();
     if (processedTexts.has(textKey)) return;
     processedTexts.add(textKey);
     
-    const colors = emotionColors[emotion] || emotionColors.calm;
+    const color = emotionColors[emotion] || emotionColors.calm;
     
-    // Find and highlight matching text
-    const highlighted = findAndHighlightText(emotionText, colors, emotion);
-    if (highlighted) {
+    // Find and highlight text
+    if (highlightTextSimple(emotionText, color, emotion)) {
       highlightCount++;
-      console.log(`✓ Highlighted: "${emotionText.substring(0, 50)}..." as ${emotion}`);
+      console.log(`✓ Highlighted: "${emotionText.substring(0, 30)}..." as ${emotion}`);
     }
   });
   
   console.log('Total highlights applied:', highlightCount);
   
-  // Show completion notification
+  // Show notification
   if (highlightCount > 0) {
-    showNotificationDirect(`✨ Highlighted ${highlightCount} emotion sections!`, 'success');
+    showNotification(`✨ Highlighted ${highlightCount} emotion sections!`, 'success');
   }
   
   return highlightCount;
 }
 
-// Function to find and highlight specific text
-function findAndHighlightText(searchText, colors, emotion) {
-  const searchWords = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  const minWordMatch = Math.max(2, Math.ceil(searchWords.length * 0.6));
+// Simple, reliable text highlighting
+function highlightTextSimple(searchText, backgroundColor, emotion) {
+  const searchWords = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 3);
   
   // Get all text nodes
   const walker = document.createTreeWalker(
@@ -313,21 +289,21 @@ function findAndHighlightText(searchText, colors, emotion) {
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: function(node) {
+        if (!node.nodeValue || node.nodeValue.trim().length < 10) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        
         const parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
         
-        // Skip script, style, and other non-content elements
-        if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'].includes(parent.tagName)) {
+        // Skip certain elements
+        const skipTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'NAV', 'HEADER', 'FOOTER'];
+        if (skipTags.includes(parent.tagName)) {
           return NodeFilter.FILTER_REJECT;
         }
         
-        // Skip already highlighted elements
-        if (parent.classList.contains('emotion-highlight')) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        
-        // Skip very short text
-        if (!node.nodeValue || node.nodeValue.trim().length < 10) {
+        // Skip already highlighted
+        if (parent.classList && parent.classList.contains('emotion-highlight')) {
           return NodeFilter.FILTER_REJECT;
         }
         
@@ -342,123 +318,92 @@ function findAndHighlightText(searchText, colors, emotion) {
     textNodes.push(node);
   }
   
-  // Find best matching text node
+  // Find best match
   let bestMatch = null;
   let bestScore = 0;
   
   textNodes.forEach(textNode => {
     const nodeText = textNode.nodeValue.toLowerCase();
     
-    // Direct substring match (highest priority)
-    if (nodeText.includes(searchText.toLowerCase())) {
-      if (!bestMatch || searchText.length > bestScore) {
-        bestMatch = textNode;
-        bestScore = searchText.length;
-      }
+    // Try exact substring match first
+    if (nodeText.includes(searchText.toLowerCase().substring(0, 50))) {
+      bestMatch = textNode;
+      bestScore = 100;
       return;
     }
     
-    // Word-based matching
+    // Try word matching
     const matchingWords = searchWords.filter(word => nodeText.includes(word));
-    if (matchingWords.length >= minWordMatch) {
-      const score = matchingWords.length;
-      if (score > bestScore) {
-        bestMatch = textNode;
-        bestScore = score;
-      }
+    const score = matchingWords.length;
+    
+    if (score >= Math.min(3, searchWords.length * 0.6) && score > bestScore) {
+      bestMatch = textNode;
+      bestScore = score;
     }
   });
   
   // Highlight the best match
   if (bestMatch) {
-    return highlightTextNode(bestMatch, colors, emotion);
+    try {
+      const parent = bestMatch.parentElement;
+      if (!parent) return false;
+      
+      // Create highlight wrapper
+      const wrapper = document.createElement('span');
+      wrapper.className = 'emotion-highlight';
+      wrapper.style.cssText = `
+        background-color: ${backgroundColor} !important;
+        padding: 2px 4px !important;
+        border-radius: 3px !important;
+        border-left: 3px solid ${backgroundColor.replace('C4', '00')} !important;
+        display: inline !important;
+        position: relative !important;
+        cursor: help !important;
+      `;
+      
+      // Add hover tooltip
+      wrapper.addEventListener('mouseenter', function() {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'emotion-tooltip';
+        tooltip.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+        tooltip.style.cssText = `
+          position: absolute;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          white-space: nowrap;
+          z-index: 10000;
+          top: -30px;
+          left: 50%;
+          transform: translateX(-50%);
+          pointer-events: none;
+        `;
+        this.appendChild(tooltip);
+      });
+      
+      wrapper.addEventListener('mouseleave', function() {
+        const tooltip = this.querySelector('.emotion-tooltip');
+        if (tooltip) tooltip.remove();
+      });
+      
+      // Wrap the text node
+      parent.insertBefore(wrapper, bestMatch);
+      wrapper.appendChild(bestMatch);
+      
+      return true;
+    } catch (error) {
+      console.error('Error highlighting:', error);
+      return false;
+    }
   }
   
   return false;
 }
 
-// Function to highlight a specific text node
-function highlightTextNode(textNode, colors, emotion) {
-  try {
-    const parent = textNode.parentElement;
-    if (!parent || parent.classList.contains('emotion-highlight')) {
-      return false;
-    }
-    
-    // Create wrapper element
-    const wrapper = document.createElement('span');
-    wrapper.className = 'emotion-highlight';
-    wrapper.setAttribute('data-emotion', emotion);
-    
-    // Apply styles
-    wrapper.style.cssText = `
-      background-color: ${colors.bg} !important;
-      border-left: 3px solid ${colors.border} !important;
-      padding: 2px 4px !important;
-      border-radius: 3px !important;
-      display: inline !important;
-      position: relative !important;
-      transition: all 0.2s ease !important;
-      line-height: inherit !important;
-      font-size: inherit !important;
-      font-family: inherit !important;
-      font-weight: inherit !important;
-      color: inherit !important;
-      text-decoration: inherit !important;
-      margin: 0 !important;
-      box-sizing: border-box !important;
-    `;
-    
-    // Add hover effects
-    wrapper.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = colors.border + '30';
-      this.style.transform = 'scale(1.02)';
-      this.style.zIndex = '1000';
-      
-      // Show tooltip
-      const tooltip = document.createElement('div');
-      tooltip.className = 'emotion-tooltip';
-      tooltip.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
-      tooltip.style.cssText = `
-        position: absolute;
-        background: rgba(0,0,0,0.9);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 10001;
-        pointer-events: none;
-        top: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-family: Arial, sans-serif;
-      `;
-      this.appendChild(tooltip);
-    });
-    
-    wrapper.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = colors.bg;
-      this.style.transform = 'scale(1)';
-      this.style.zIndex = 'auto';
-      const tooltip = this.querySelector('.emotion-tooltip');
-      if (tooltip) tooltip.remove();
-    });
-    
-    // Insert wrapper and move text node
-    parent.insertBefore(wrapper, textNode);
-    wrapper.appendChild(textNode);
-    
-    return true;
-  } catch (error) {
-    console.error('Error highlighting text node:', error);
-    return false;
-  }
-}
-
-// Show notification function
-function showNotificationDirect(message, type = 'info') {
-  // Remove existing notification
+// Show notification
+function showNotification(message, type = 'info') {
   const existing = document.querySelector('.emotion-notification');
   if (existing) existing.remove();
   
@@ -466,20 +411,18 @@ function showNotificationDirect(message, type = 'info') {
   notification.className = 'emotion-notification';
   
   const colors = {
-    info: { bg: '#3B82F6', text: 'white' },
-    success: { bg: '#10B981', text: 'white' },
-    error: { bg: '#EF4444', text: 'white' },
-    warning: { bg: '#F59E0B', text: 'white' }
+    info: '#3B82F6',
+    success: '#10B981', 
+    error: '#EF4444',
+    warning: '#F59E0B'
   };
-  
-  const color = colors[type] || colors.info;
   
   notification.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
-    background: ${color.bg};
-    color: ${color.text};
+    background: ${colors[type] || colors.info};
+    color: white;
     padding: 12px 20px;
     border-radius: 8px;
     z-index: 999999;
@@ -488,18 +431,16 @@ function showNotificationDirect(message, type = 'info') {
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     max-width: 300px;
-    word-wrap: break-word;
   `;
   
   notification.textContent = message;
   document.body.appendChild(notification);
   
-  // Auto remove after 3 seconds
   setTimeout(() => {
     if (notification.parentNode) {
       notification.remove();
     }
-  }, 3000);
+  }, 4000);
 }
 
 // Show status message
@@ -507,20 +448,17 @@ function showStatus(message, type) {
   statusMessage.textContent = message;
   statusMessage.className = `status-message show ${type}`;
   
-  // Auto-hide after delay based on type
   const delay = type === 'error' ? 5000 : 3000;
   setTimeout(() => {
     statusMessage.classList.remove('show');
   }, delay);
 }
 
-// Add clear highlights button functionality
+// Add clear highlights button
 document.addEventListener('DOMContentLoaded', () => {
-  // Add clear button if it doesn't exist
   if (!document.getElementById('clearBtn')) {
     const clearBtn = document.createElement('button');
     clearBtn.id = 'clearBtn';
-    clearBtn.className = 'clear-btn';
     clearBtn.innerHTML = '🧹 Clear Highlights';
     clearBtn.style.cssText = `
       width: 100%;
@@ -554,13 +492,12 @@ document.addEventListener('DOMContentLoaded', () => {
               const highlights = document.querySelectorAll('.emotion-highlight');
               highlights.forEach(highlight => {
                 const parent = highlight.parentNode;
-                while (highlight.firstChild) {
-                  parent.insertBefore(highlight.firstChild, highlight);
+                if (parent) {
+                  parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                  parent.normalize();
                 }
-                parent.removeChild(highlight);
               });
               
-              // Remove tooltips and notifications
               document.querySelectorAll('.emotion-tooltip, .emotion-notification').forEach(el => el.remove());
               
               return highlights.length;
@@ -573,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Insert after analyze button
     analyzeBtn.parentNode.insertBefore(clearBtn, analyzeBtn.nextSibling);
   }
 });
