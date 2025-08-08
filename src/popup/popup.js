@@ -145,96 +145,157 @@ async function callGeminiAPI(content) {
 
 // Direct highlighting function
 function applyHighlightsDirect(emotions) {
-  console.log('BRUTE FORCE HIGHLIGHTING with', emotions.length, 'emotions');
+  console.log('Applying subtle highlights with', emotions.length, 'emotions');
   
-  const colors = ['#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA', '#FFD1FF', '#C7CEEA', '#FFDAB9', '#E0E0E0'];
+  const emotionColors = {
+    happy: '#FFF9C4', sad: '#E1F5FE', angry: '#FFEBEE',
+    excited: '#FFF3E0', worried: '#F3E5F5', surprised: '#E8F5E8',
+    trusting: '#E0F2F1', calm: '#F1F8E9'
+  };
   
-  // Just highlight every fucking paragraph with random colors
-  const paragraphs = document.querySelectorAll('p, div, span, h1, h2, h3, h4, h5, h6, li, td, a');
-  
-  console.log('Found', paragraphs.length, 'elements to highlight');
-  
-  let count = 0;
-  paragraphs.forEach((element, index) => {
-    const text = element.textContent.trim();
-    
-    // Skip if too short or already highlighted
-    if (text.length < 20 || element.classList.contains('emotion-highlight') || element.querySelector('.emotion-highlight')) {
-      return;
+  // Remove existing highlights
+  document.querySelectorAll('.emotion-highlight').forEach(span => {
+    const parent = span.parentNode;
+    while (span.firstChild) {
+      parent.insertBefore(span.firstChild, span);
     }
-    
-    // Skip if it's a container with other elements
-    if (element.children.length > 2) {
-      return;
-    }
-    
-    // Apply highlight
-    const color = colors[index % colors.length];
-    element.style.cssText += `
-      background-color: ${color} !important;
-      padding: 4px 8px !important;
-      border-radius: 4px !important;
-      margin: 2px 0 !important;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
-      border-left: 3px solid #333 !important;
-    `;
-    element.classList.add('emotion-highlight');
-    
-    count++;
-    
-    // Stop after highlighting 30 elements
-    if (count >= 30) return;
+    parent.removeChild(span);
   });
   
-  console.log(`HIGHLIGHTED ${count} ELEMENTS!`);
+  let highlightCount = 0;
   
-  // Big fucking notification
+  // Create tooltip element
+  const tooltip = document.createElement('div');
+  tooltip.id = 'emotion-tooltip';
+  tooltip.style.cssText = `
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  `;
+  document.body.appendChild(tooltip);
+  
+  emotions.forEach(emotion => {
+    const searchText = emotion.text.trim();
+    const emotionType = emotion.emotion;
+    const color = emotionColors[emotionType] || '#F5F5F5';
+    
+    if (searchText.length < 10) return;
+    
+    // Find text in all text nodes
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      const nodeText = node.nodeValue;
+      const parent = node.parentElement;
+      
+      if (!parent || parent.tagName.toLowerCase() === 'script' || 
+          parent.tagName.toLowerCase() === 'style' ||
+          parent.classList.contains('emotion-highlight')) {
+        continue;
+      }
+      
+      // Simple text matching - look for first few words
+      const searchWords = searchText.split(' ').slice(0, 3).join(' ').toLowerCase();
+      if (nodeText.toLowerCase().includes(searchWords)) {
+        
+        // Wrap the text node in a highlight span
+        const span = document.createElement('span');
+        span.className = 'emotion-highlight';
+        span.style.cssText = `
+          background-color: ${color} !important;
+          border-radius: 2px !important;
+          transition: all 0.2s ease !important;
+          cursor: help !important;
+        `;
+        span.setAttribute('data-emotion', emotionType);
+        span.setAttribute('data-text', searchText);
+        
+        // Add hover events
+        span.addEventListener('mouseenter', (e) => {
+          const rect = span.getBoundingClientRect();
+          tooltip.textContent = `Emotion: ${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)}`;
+          tooltip.style.left = (rect.left + window.scrollX) + 'px';
+          tooltip.style.top = (rect.top + window.scrollY - 35) + 'px';
+          tooltip.style.opacity = '1';
+          
+          // Slightly darken on hover
+          span.style.backgroundColor = darkenColor(color);
+        });
+        
+        span.addEventListener('mouseleave', () => {
+          tooltip.style.opacity = '0';
+          span.style.backgroundColor = color;
+        });
+        
+        parent.insertBefore(span, node);
+        span.appendChild(node);
+        
+        highlightCount++;
+        break; // Only highlight first match per emotion
+      }
+    }
+  });
+  
+  console.log(`Applied ${highlightCount} subtle highlights`);
+  
+  // Small notification in corner
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: #4CAF50 !important;
     color: white !important;
-    padding: 30px 40px !important;
-    border-radius: 15px !important;
+    padding: 12px 16px !important;
+    border-radius: 6px !important;
     z-index: 999999 !important;
     font-family: Arial, sans-serif !important;
-    font-size: 24px !important;
-    font-weight: bold !important;
-    text-align: center !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
-    animation: pulse 2s infinite !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s !important;
   `;
-  notification.innerHTML = `
-    🎨 FUCK YEAH! 🎨<br>
-    <div style="font-size: 18px; margin-top: 10px;">
-      Highlighted ${count} text blocks!
-    </div>
-  `;
-  
-  // Add pulse animation
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes pulse {
-      0% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.05); }
-      100% { transform: translate(-50%, -50%) scale(1); }
-    }
-  `;
-  document.head.appendChild(style);
-  
+  notification.textContent = `✨ Highlighted ${highlightCount} emotions`;
   document.body.appendChild(notification);
   
+  // Fade in notification
+  setTimeout(() => notification.style.opacity = '1', 100);
+  
   setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-    if (style.parentNode) {
-      style.parentNode.removeChild(style);
-    }
-  }, 4000);
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 2000);
+}
+
+// Helper function to darken colors on hover
+function darkenColor(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return hex;
+  
+  const r = Math.max(0, parseInt(result[1], 16) - 20);
+  const g = Math.max(0, parseInt(result[2], 16) - 20);
+  const b = Math.max(0, parseInt(result[3], 16) - 20);
+  
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 // Analyze content with Gemini API
