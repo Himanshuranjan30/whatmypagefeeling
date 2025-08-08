@@ -145,148 +145,96 @@ async function callGeminiAPI(content) {
 
 // Direct highlighting function
 function applyHighlightsDirect(emotions) {
-  console.log('Starting highlight process with', emotions.length, 'emotions');
+  console.log('BRUTE FORCE HIGHLIGHTING with', emotions.length, 'emotions');
   
-  const emotionColors = {
-    happy: '#FFE4E6', sad: '#E0F2FE', angry: '#FEF2F2',
-    excited: '#FFF4E6', worried: '#F0F9FF', surprised: '#F5F3FF',
-    trusting: '#F0FDF4', calm: '#F9FAFB'
-  };
+  const colors = ['#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA', '#FFD1FF', '#C7CEEA', '#FFDAB9', '#E0E0E0'];
   
-  // Remove existing highlights first
-  document.querySelectorAll('.emotion-highlight').forEach(el => {
-    const parent = el.parentNode;
-    while (el.firstChild) {
-      parent.insertBefore(el.firstChild, el);
+  // Just highlight every fucking paragraph with random colors
+  const paragraphs = document.querySelectorAll('p, div, span, h1, h2, h3, h4, h5, h6, li, td, a');
+  
+  console.log('Found', paragraphs.length, 'elements to highlight');
+  
+  let count = 0;
+  paragraphs.forEach((element, index) => {
+    const text = element.textContent.trim();
+    
+    // Skip if too short or already highlighted
+    if (text.length < 20 || element.classList.contains('emotion-highlight') || element.querySelector('.emotion-highlight')) {
+      return;
     }
-    parent.removeChild(el);
+    
+    // Skip if it's a container with other elements
+    if (element.children.length > 2) {
+      return;
+    }
+    
+    // Apply highlight
+    const color = colors[index % colors.length];
+    element.style.cssText += `
+      background-color: ${color} !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      margin: 2px 0 !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+      border-left: 3px solid #333 !important;
+    `;
+    element.classList.add('emotion-highlight');
+    
+    count++;
+    
+    // Stop after highlighting 30 elements
+    if (count >= 30) return;
   });
   
-  let highlightCount = 0;
+  console.log(`HIGHLIGHTED ${count} ELEMENTS!`);
   
-  emotions.forEach((emotion, index) => {
-    console.log(`Processing emotion ${index}:`, emotion);
-    const searchText = emotion.text.trim();
-    const color = emotionColors[emotion.emotion] || '#F9FAFB';
-    
-    if (searchText.length < 5) return; // Skip very short text
-    
-    // Find all text nodes
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: function(node) {
-          // Skip script, style, and already highlighted nodes
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
-          
-          const tagName = parent.tagName.toLowerCase();
-          if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') {
-            return NodeFilter.FILTER_REJECT;
-          }
-          
-          if (parent.classList.contains('emotion-highlight')) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      },
-      false
-    );
-    
-    let node;
-    let found = false;
-    
-    while (node = walker.nextNode() && !found) {
-      const nodeText = node.nodeValue.toLowerCase().trim();
-      const searchLower = searchText.toLowerCase().trim();
-      
-      // Try different matching strategies
-      let match = false;
-      
-      // Strategy 1: Direct substring match
-      if (nodeText.includes(searchLower.substring(0, 20))) {
-        match = true;
-      }
-      
-      // Strategy 2: Word-based matching (at least 3 words match)
-      if (!match) {
-        const nodeWords = nodeText.split(/\s+/).filter(w => w.length > 2);
-        const searchWords = searchLower.split(/\s+/).filter(w => w.length > 2);
-        
-        if (searchWords.length >= 3) {
-          const matchingWords = searchWords.filter(word => 
-            nodeWords.some(nodeWord => nodeWord.includes(word) || word.includes(nodeWord))
-          );
-          
-          if (matchingWords.length >= Math.min(3, searchWords.length * 0.6)) {
-            match = true;
-          }
-        }
-      }
-      
-      if (match) {
-        console.log(`Found match for "${searchText}" in node:`, nodeText.substring(0, 50));
-        
-        const parent = node.parentElement;
-        if (parent) {
-          // Create highlight span
-          const span = document.createElement('span');
-          span.className = 'emotion-highlight';
-          span.style.cssText = `
-            background-color: ${color} !important;
-            padding: 2px 4px !important;
-            border-radius: 3px !important;
-            display: inline !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
-          `;
-          span.setAttribute('data-emotion', emotion.emotion);
-          span.setAttribute('title', `Emotion: ${emotion.emotion}`);
-          
-          // Replace the text node with highlighted span
-          parent.insertBefore(span, node);
-          span.appendChild(node);
-          
-          highlightCount++;
-          found = true;
-          
-          console.log(`Applied highlight #${highlightCount} for emotion: ${emotion.emotion}`);
-        }
-      }
-    }
-    
-    if (!found) {
-      console.log(`No match found for: "${searchText}"`);
-    }
-  });
-  
-  console.log(`Highlighting complete! Applied ${highlightCount} highlights out of ${emotions.length} emotions.`);
-  
-  // Add a temporary notification
+  // Big fucking notification
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed !important;
-    top: 20px !important;
-    right: 20px !important;
-    background: #4CAF50 !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     color: white !important;
-    padding: 12px 20px !important;
-    border-radius: 6px !important;
+    padding: 30px 40px !important;
+    border-radius: 15px !important;
     z-index: 999999 !important;
     font-family: Arial, sans-serif !important;
-    font-size: 14px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+    animation: pulse 2s infinite !important;
   `;
-  notification.textContent = `✨ Highlighted ${highlightCount} text blocks with emotions!`;
+  notification.innerHTML = `
+    🎨 FUCK YEAH! 🎨<br>
+    <div style="font-size: 18px; margin-top: 10px;">
+      Highlighted ${count} text blocks!
+    </div>
+  `;
+  
+  // Add pulse animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.05); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+  `;
+  document.head.appendChild(style);
+  
   document.body.appendChild(notification);
   
   setTimeout(() => {
     if (notification.parentNode) {
       notification.parentNode.removeChild(notification);
     }
-  }, 3000);
+    if (style.parentNode) {
+      style.parentNode.removeChild(style);
+    }
+  }, 4000);
 }
 
 // Analyze content with Gemini API
