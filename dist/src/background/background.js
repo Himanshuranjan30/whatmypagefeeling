@@ -22,27 +22,27 @@ async function analyzeTextWithGemini(content, apiKey) {
     ? content.substring(0, maxLength) + '...' 
     : content;
   
-  const prompt = `Analyze the emotional content of this webpage text. Focus on meaningful sentences and paragraphs.
+  const prompt = `Analyze the emotional content of this webpage text and identify emotions in different sections.
 
-For each substantial text block (at least 20-30 words), provide:
-1. The exact text snippet (20-150 words)
-2. The dominant emotion (choose from: happy, excited, sad, angry, frustrated, love, worried, surprised, disgust, trusting, anticipation, or calm)
+For each meaningful section of text, provide:
+1. A representative text snippet from that section (keep it 10-50 words)
+2. The dominant emotion for that section
 
-Format your response as a JSON array:
+Use these emotions: happy, excited, sad, angry, frustrated, love, worried, surprised, disgust, trusting, anticipation, calm
+
+Return a JSON array like this:
 [
-  {"text": "meaningful sentence or paragraph here", "emotion": "happy"},
-  {"text": "another substantial text block", "emotion": "calm"}
+  {"text": "actual text from the page", "emotion": "happy"},
+  {"text": "another section of text", "emotion": "sad"}
 ]
 
-IMPORTANT RULES:
-- Focus on complete sentences and paragraphs, not fragments
-- Skip navigation items, single words, numbers, or very short phrases
-- Each text snippet should be substantial enough to convey emotion
-- Aim for 20-100 emotion blocks depending on page content
-- Prioritize main content over boilerplate text
-- If no clear emotion, use "calm"
+Rules:
+- Extract ACTUAL text snippets from the content, don't paraphrase
+- Keep snippets short but meaningful (10-50 words)
+- Cover different sections of the content
+- Return 10-50 results depending on content length
 
-Text to analyze:
+Content to analyze:
 ${truncatedContent}`;
 
   try {
@@ -89,14 +89,14 @@ ${truncatedContent}`;
                               'anticipation', 'calm', 'neutral'];
       
       const validatedEmotions = emotions
-        .filter(item => item.text && item.emotion && item.text.length > 20)
+        .filter(item => item.text && item.emotion)
         .map(item => ({
           text: item.text.trim(),
           emotion: validEmotions.includes(item.emotion.toLowerCase()) 
                    ? item.emotion.toLowerCase() 
                    : 'calm'
         }))
-        .slice(0, 200); // Limit to 200 meaningful emotion blocks
+        .slice(0, 100); // Limit to 100 emotion blocks
       
       console.log('Validated emotions count:', validatedEmotions.length);
       console.log('Sample emotions:', validatedEmotions.slice(0, 3));

@@ -66,15 +66,23 @@ analyzeBtn.addEventListener('click', async () => {
             files: ['src/content/content.js']
           });
           
-          // Try again
-          chrome.tabs.sendMessage(tab.id, { action: 'getPageContent' }, (response) => {
-            if (response && response.content) {
-              analyzeContent(response.content, result.geminiApiKey, tab.id);
-            } else {
-              showStatus('Failed to get page content', 'error');
-              analyzeBtn.classList.remove('loading');
-            }
+          // Also inject CSS
+          await chrome.scripting.insertCSS({
+            target: { tabId: tab.id },
+            files: ['src/styles/content.css']
           });
+          
+          // Try again after a short delay
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tab.id, { action: 'getPageContent' }, (response) => {
+              if (response && response.content) {
+                analyzeContent(response.content, result.geminiApiKey, tab.id);
+              } else {
+                showStatus('Failed to get page content', 'error');
+                analyzeBtn.classList.remove('loading');
+              }
+            });
+          }, 100);
         } else if (response && response.content) {
           analyzeContent(response.content, result.geminiApiKey, tab.id);
         } else {

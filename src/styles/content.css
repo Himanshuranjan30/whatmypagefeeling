@@ -1,22 +1,17 @@
 /* Emotion highlight styles */
 .emotion-highlight {
+  background-color: var(--emotion-color);
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
   display: inline !important;
-  position: relative;
-  cursor: pointer;
-  animation: fadeIn 0.5s ease;
-  word-wrap: break-word;
-  line-height: inherit !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.emotion-highlight:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 10;
 }
 
 /* Tooltip for emotion highlights */
@@ -36,53 +31,29 @@
   pointer-events: none;
   transition: opacity 0.3s;
   z-index: 10000;
+  margin-bottom: 4px;
 }
 
 .emotion-highlight:hover::after {
   opacity: 1;
 }
 
-/* Emotion highlight variations - using lighter, pastel colors */
-.emotion-highlight[data-emotion="happy"] {
-  background: #FFF4B3 !important;
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    background-color: transparent;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.emotion-highlight[data-emotion="sad"] {
-  background: #B3D4F5 !important;
+.emotion-highlight {
+  animation: fadeIn 0.5s ease;
 }
 
-.emotion-highlight[data-emotion="angry"] {
-  background: #FFB3B3 !important;
-}
-
-.emotion-highlight[data-emotion="love"] {
-  background: #FFD6EC !important;
-}
-
-.emotion-highlight[data-emotion="fear"],
-.emotion-highlight[data-emotion="worried"] {
-  background: #D4B3E6 !important;
-}
-
-.emotion-highlight[data-emotion="neutral"],
-.emotion-highlight[data-emotion="calm"] {
-  background: #E0E5E6 !important;
-}
-
-.emotion-highlight[data-emotion="surprise"],
-.emotion-highlight[data-emotion="surprised"] {
-  background: #FFD4A3 !important;
-}
-
-.emotion-highlight[data-emotion="disgust"] {
-  background: #D4B3A3 !important;
-}
-
-.emotion-highlight[data-emotion="trust"],
-.emotion-highlight[data-emotion="trusting"] {
-  background: #B3E6B3 !important;
-}
-
-.emotion-highlight[data-emotion="anticipation"] {
-  background: #FFB3D4 !important;
+/* Ensure proper text color contrast */
+.emotion-highlight {
+  color: #000 !important;
 }
