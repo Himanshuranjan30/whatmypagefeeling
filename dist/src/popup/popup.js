@@ -9,103 +9,142 @@ emotionPreview.style.display = 'block';
 
 // Analyze button click handler
 analyzeBtn.addEventListener('click', async () => {
-  // Show loading state
   analyzeBtn.classList.add('loading');
   statusMessage.classList.remove('show');
 
   try {
-    // Get the active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    // Check if tab is valid
-    if (!tab || !tab.id) {
-      showStatus('Unable to access current tab', 'error');
+    // Just get the fucking text directly from the page
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: extractPageTextDirect
+    });
+    
+    const pageText = results[0].result;
+    
+    if (!pageText || pageText.trim().length === 0) {
+      showStatus('No text found on page', 'error');
       analyzeBtn.classList.remove('loading');
       return;
     }
-
-    // Check if it's a chrome:// or other restricted URL
-    if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://')) {
-      showStatus('Cannot analyze browser internal pages. Please try on a regular website.', 'error');
-      analyzeBtn.classList.remove('loading');
-      return;
+    
+    console.log('Got page text, length:', pageText.length);
+    
+    // Call Gemini API directly
+    const emotions = await callGeminiAPI(pageText);
+    
+    if (emotions && emotions.length > 0) {
+      // Apply highlights directly
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: applyHighlightsDirect,
+        args: [emotions]
+      });
+      
+      await chrome.scripting.insertCSS({
+        target: { tabId: tab.id },
+        files: ['src/styles/content.css']
+      });
+      
+      showStatus(`Analysis complete! Highlighted ${emotions.length} text blocks.`, 'success');
+    } else {
+      showStatus('No emotions found in analysis', 'error');
     }
-
-    await injectScriptsAndAnalyze(tab.id);
     
   } catch (error) {
-    console.error('Extension error:', error);
+    console.error('Error:', error);
     showStatus('Error: ' + error.message, 'error');
-    analyzeBtn.classList.remove('loading');
   }
+  
+  analyzeBtn.classList.remove('loading');
 });
 
-// Function to inject scripts and analyze with retry logic
-async function injectScriptsAndAnalyze(tabId, retryCount = 0) {
-  const maxRetries = 3;
+// Direct text extraction function
+function extractPageTextDirect() {
+  const body = document.body;
+  if (!body) return '';
   
-  try {
-    // Always inject scripts fresh
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: ['src/content/content.js']
-    });
-    
-    await chrome.scripting.insertCSS({
-      target: { tabId: tabId },
-      files: ['src/styles/content.css']
-    });
-    
-    console.log('Scripts injected successfully, attempt:', retryCount + 1);
-    
-    // Wait longer for scripts to initialize
-    await new Promise(resolve => setTimeout(resolve, 500 + (retryCount * 200)));
-    
-    // Try to get page content
-    chrome.tabs.sendMessage(tabId, { action: 'getPageContent' }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('Message error on attempt', retryCount + 1, ':', chrome.runtime.lastError);
-        
-        if (retryCount < maxRetries) {
-          console.log('Retrying script injection...');
-          injectScriptsAndAnalyze(tabId, retryCount + 1);
-        } else {
-          showStatus('Failed to communicate with page after multiple attempts. Please refresh the page and try again.', 'error');
-          analyzeBtn.classList.remove('loading');
-        }
-        return;
-      }
-      
-      if (response && response.content) {
-        console.log('Got page content, length:', response.content.length);
-        if (response.content.trim().length === 0) {
-          showStatus('No text content found on this page', 'error');
-          analyzeBtn.classList.remove('loading');
-          return;
-        }
-        analyzeContent(response.content, null, tabId);
-      } else {
-        console.error('No content in response:', response);
-        if (retryCount < maxRetries) {
-          console.log('Retrying due to empty response...');
-          setTimeout(() => injectScriptsAndAnalyze(tabId, retryCount + 1), 1000);
-        } else {
-          showStatus('Failed to extract page content after multiple attempts. Please refresh the page.', 'error');
-          analyzeBtn.classList.remove('loading');
-        }
-      }
-    });
-    
-  } catch (injectError) {
-    console.error('Script injection error:', injectError);
-    if (retryCount < maxRetries) {
-      console.log('Retrying script injection due to error...');
-      setTimeout(() => injectScriptsAndAnalyze(tabId, retryCount + 1), 1000);
-    } else {
-      showStatus('Failed to inject scripts. Please refresh the page and try again.', 'error');
-      analyzeBtn.classList.remove('loading');
-    }
+  const clone = body.cloneNode(true);
+  const scripts = clone.querySelectorAll('script, style, noscript, iframe');
+  scripts.forEach(el => el.remove());
+  
+  return clone.textContent.replace(/\s+/g, ' ').trim();
+}
+
+// Direct API call function
+async function callGeminiAPI(content) {
+  const API_KEY = 'AIzaSyCKOUg7XmqbauqX8zcjdeNzzKOPbZnjxVo';
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+  
+  const prompt = `Analyze this webpage content and identify emotional sections. For each meaningful paragraph or sentence (skip single words, numbers, navigation), return JSON array with:
+  {"text": "actual text snippet 10-50 words", "emotion": "happy/sad/angry/excited/worried/surprised/trusting/calm"}
+  
+  Content: ${content.substring(0, 20000)}`;
+  
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  });
+  
+  const data = await response.json();
+  
+  if (data.error) {
+    throw new Error(data.error.message);
   }
+  
+  const text = data.candidates[0].parts[0].text;
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  
+  if (jsonMatch) {
+    return JSON.parse(jsonMatch[0]).slice(0, 50);
+  }
+  
+  return [];
+}
+
+// Direct highlighting function
+function applyHighlightsDirect(emotions) {
+  const emotionColors = {
+    happy: '#FFE4E6', sad: '#E0F2FE', angry: '#FEF2F2',
+    excited: '#FFF4E6', worried: '#F0F9FF', surprised: '#F5F3FF',
+    trusting: '#F0FDF4', calm: '#F9FAFB'
+  };
+  
+  emotions.forEach(emotion => {
+    const text = emotion.text.trim();
+    const color = emotionColors[emotion.emotion] || '#F9FAFB';
+    
+    // Find and highlight the text
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.nodeValue.includes(text.substring(0, 30))) {
+        const parent = node.parentElement;
+        if (parent && !parent.classList.contains('emotion-highlight')) {
+          const span = document.createElement('span');
+          span.className = 'emotion-highlight';
+          span.style.backgroundColor = color;
+          span.style.padding = '2px 4px';
+          span.style.borderRadius = '3px';
+          span.style.display = 'inline';
+          
+          parent.insertBefore(span, node);
+          span.appendChild(node);
+          break;
+        }
+      }
+    }
+  });
 }
 
 // Analyze content with Gemini API
