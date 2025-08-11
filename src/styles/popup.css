@@ -20,8 +20,8 @@ body {
   max-width: 400px;
 }
 
-/* Trust Panel - PagePulse Branding */
-.trust-panel {
+/* Theme Panel */
+.theme-panel {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -29,22 +29,6 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-}
-
-.trust-rating {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
-}
-
-.trust-text {
-  font-size: 11px;
-  color: #667eea;
-  font-weight: 500;
 }
 
 /* Header - Professional typography */
